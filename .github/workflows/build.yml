@@ -70,7 +70,7 @@ jobs:
       if: ${{ steps.tagver.outputs.is_valid == 'true' }}
       run: dotnet publish ${{ env.NET_PROJECT }} -r linux-musl-arm64 ${{ env.NET_PUBLISH_ARGS }} -p:Version=${{ steps.tagver.outputs.version }} -o ${{ env.NET_PUBLISH_DIR }}linux/arm64/v8
 
-    - name: Set up QEMU
+    - name: Docker QEMU Setup
       if: ${{ steps.tagver.outputs.is_valid == 'true' }}
       uses: docker/setup-qemu-action@v3
       id: dockerqemu
