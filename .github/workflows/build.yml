@@ -17,7 +17,7 @@ on:
 env:
   NET_SOLUTION: GostGen/GostGen.slnx
   NET_PROJECT: GostGen/source/GostGen.csproj
-  NET_PUBLISH_DIR: /GostGen/publish/
+  NET_PUBLISH_DIR: GostGen/publish/
   NET_PUBLISH_ARGS: "--verbosity normal --configuration Release -p:DebugType=embedded -p:PublishSingleFile=true --self-contained"
   DOCKER_REGISTRY: ghcr.io
   DOCKER_IMAGE_NAME: ${{ github.repository_owner }}/gostgen
