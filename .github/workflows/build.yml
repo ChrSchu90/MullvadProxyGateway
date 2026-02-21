@@ -1,0 +1,120 @@
+name: Build
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - '**'
+    paths-ignore:
+      - '**/*.md'
+      - '**/*.png'
+    tags:
+      - 'v*'
+  pull_request:
+    branches:
+      - 'main'
+
+env:
+  NET_SOLUTION: GostGen/GostGen.slnx
+  NET_PROJECT: GostGen/source/GostGen.csproj
+  NET_PUBLISH_DIR: /GostGen/publish/
+  NET_PUBLISH_ARGS: "--verbosity normal --configuration Release -p:DebugType=embedded -p:PublishSingleFile=true --self-contained"
+  DOCKER_REGISTRY: ghcr.io
+  DOCKER_IMAGE_NAME: ${{ github.repository_owner }}/gostgen
+  DOCKER_PLATFORMS: linux/amd64,linux/arm/v7,linux/arm64/v8
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+      packages: write
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v5
+      with:
+        fetch-depth: 0
+        fetch-tags: true
+
+    - name: .NET Setup
+      uses: actions/setup-dotnet@v5
+      with:
+        dotnet-version: |
+          10.0.x
+
+    - name: Get Version from Tag
+      uses: ChrSchu90/GitTagSemanticVersion@v1.1
+      if: startsWith(github.event.ref, 'refs/tags/v')
+      id: tagver
+
+    - name: .NET Restore
+      run: dotnet restore ${{ env.NET_SOLUTION }}
+
+    - name: .NET Build
+      run: dotnet build ${{ env.NET_SOLUTION }} --verbosity normal --no-restore --configuration Release
+
+    - name: .NET Test
+      run: dotnet test ${{ env.NET_SOLUTION }} --verbosity normal --no-restore --no-build --configuration Release
+
+    - name: .NET Publish amd64
+      if: ${{ steps.tagver.outputs.is_valid == 'true' }}
+      run: dotnet publish ${{ env.NET_PROJECT }} -r linux-musl-x64 ${{ env.NET_PUBLISH_ARGS }} -p:Version=${{ steps.tagver.outputs.version }} -o ${{ env.NET_PUBLISH_DIR }}linux/amd64
+
+    - name: .NET Publish armv7
+      if: ${{ steps.tagver.outputs.is_valid == 'true' }}
+      run: dotnet publish ${{ env.NET_PROJECT }} -r linux-musl-arm ${{ env.NET_PUBLISH_ARGS }} -p:Version=${{ steps.tagver.outputs.version }} -o ${{ env.NET_PUBLISH_DIR }}linux/arm/v7
+
+    - name: .NET Publish armv8
+      if: ${{ steps.tagver.outputs.is_valid == 'true' }}
+      run: dotnet publish ${{ env.NET_PROJECT }} -r linux-musl-arm64 ${{ env.NET_PUBLISH_ARGS }} -p:Version=${{ steps.tagver.outputs.version }} -o ${{ env.NET_PUBLISH_DIR }}linux/arm64/v8
+
+    - name: Docker Buildx Setup
+      if: ${{ steps.tagver.outputs.is_valid == 'true' }}
+      uses: docker/setup-buildx-action@v3
+      id: dockersetup
+
+    - name: Docker Login
+      uses: docker/login-action@v3
+      if: ${{ steps.dockersetup.outcome == 'success' }}
+      id: dockerlogin
+      with:
+        registry: ${{ env.DOCKER_REGISTRY }}
+        username: ${{ github.repository_owner }}
+        password: ${{ secrets.GITHUB_TOKEN }}       
+
+    - name: Docker tags/labels
+      if: ${{ steps.dockerlogin.outcome == 'success' }}
+      uses: docker/metadata-action@v5
+      id: dockermeta
+      with:
+        images: ${{ env.DOCKER_REGISTRY }}/${{ env.DOCKER_IMAGE_NAME }}
+        tags: |
+          type=raw,value=${{ steps.tagver.outputs.version }},enable=${{ steps.tagver.outputs.is_release == 'true' }}
+          type=raw,value=${{ steps.tagver.outputs.major }},enable=${{ steps.tagver.outputs.is_release == 'true' }}
+          type=raw,value=${{ steps.tagver.outputs.major }}.${{ steps.tagver.outputs.minor }},enable=${{ steps.tagver.outputs.is_release == 'true' }}
+          type=raw,value=latest,enable=${{ steps.tagver.outputs.is_release == 'true' }}
+          type=raw,value=${{ steps.tagver.outputs.version }}-preview,enable=${{ steps.tagver.outputs.is_prerelease == 'true' }}
+          type=raw,value=preview,enable=${{ steps.tagver.outputs.is_prerelease == 'true' }}
+
+    - name: Docker build/push
+      if: ${{ steps.dockermeta.outcome == 'success' }}
+      uses: docker/build-push-action@v6
+      id: dockerbuild
+      with:
+        context: .
+        push: ${{ steps.tagver.outputs.is_valid == 'true' }}
+        platforms: ${{ env.DOCKER_PLATFORMS }}
+        tags: ${{ steps.dockermeta.outputs.tags }}
+        labels: ${{ steps.dockermeta.outputs.labels }}
+        #cache-from: type=gha
+        #cache-to: type=gha,mode=max
+
+    - name: Create Release
+      uses: softprops/action-gh-release@v2
+      if: ${{ steps.dockerbuild.outcome == 'success' }}
+      with:        
+        tag_name: ${{ steps.tagver.outputs.version_tag }}
+        prerelease: ${{ steps.tagver.outputs.is_prerelease == 'true' }}
+        make_latest: ${{ steps.tagver.outputs.is_release == 'true' }}

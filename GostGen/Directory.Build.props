@@ -1,0 +1,25 @@
+<Project>
+
+    <!-- Global project configuration see: https://learn.microsoft.com/en-us/dotnet/core/project-sdk/msbuild-props -->
+    <PropertyGroup>
+        <!-- Make sure to update target framework in workfow as well! -->
+        <TargetFramework>net10.0</TargetFramework>
+        <AssemblyName>$(MSBuildProjectName)</AssemblyName>
+        <Company>ChrSchu</Company>
+        <GenerateDocumentationFile>false</GenerateDocumentationFile>
+        <AssemblyOriginatorKeyFile>..\Key.snk</AssemblyOriginatorKeyFile>
+        <SignAssembly>false</SignAssembly>
+        <Copyright>$(Company) © $([System.DateTime]::Now.Year). All rights reserved.</Copyright>
+        <ImplicitUsings>disable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <LangVersion>14.0</LangVersion>
+    </PropertyGroup>
+
+    <!-- Make internals visible to related test project -->
+    <ItemGroup  Condition="'$(IsTestProject)' != 'true'">
+        <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+            <_Parameter1>$(AssemblyName).Tests</_Parameter1>
+        </AssemblyAttribute>
+    </ItemGroup>
+
+</Project>

@@ -1,0 +1,70 @@
+namespace GostGen;
+
+using System.Collections.Generic;
+using System.Text.Json.Serialization;
+
+/// <summary>
+/// Mullvad WireGuard relay received from the API https://api.mullvad.net/www/relays/wireguard
+/// </summary>
+internal record MullvadRelay
+{
+    [JsonPropertyName("hostname")]
+    public string? Hostname { get; init; }
+
+    [JsonPropertyName("country_code")]
+    public string? CountryCode { get; init; }
+
+    [JsonPropertyName("country_name")]
+    public string? CountryName { get; init; }
+
+    [JsonPropertyName("city_code")]
+    public string? CityCode { get; init; }
+
+    [JsonPropertyName("city_name")]
+    public string? CityName { get; init; }
+
+    [JsonPropertyName("fqdn")]
+    public string? Fqdn { get; init; }
+
+    [JsonPropertyName("active")]
+    public bool Active { get; init; }
+
+    [JsonPropertyName("owned")]
+    public bool Owned { get; init; }
+
+    [JsonPropertyName("provider")]
+    public string? Provider { get; init; }
+
+    [JsonPropertyName("ipv4_addr_in")]
+    public string? Ipv4AddrIn { get; init; }
+
+    [JsonPropertyName("ipv6_addr_in")]
+    public string? Ipv6AddrIn { get; init; }
+
+    [JsonPropertyName("network_port_speed")]
+    public int NetworkPortSpeed { get; init; }
+
+    [JsonPropertyName("stboot")]
+    public bool Stboot { get; init; }
+
+    [JsonPropertyName("type")]
+    public string? Type { get; init; }
+
+    [JsonPropertyName("status_messages")]
+    public List<string>? StatusMessages { get; init; }
+
+    [JsonPropertyName("pubkey")]
+    public string? Pubkey { get; init; }
+
+    [JsonPropertyName("multihop_port")]
+    public int MultihopPort { get; init; }
+
+    [JsonPropertyName("socks_name")]
+    public string? SocksName { get; init; }
+
+    [JsonPropertyName("socks_port")]
+    public int SocksPort { get; init; }
+
+    [JsonPropertyName("daita")]
+    public bool Daita { get; init; }
+}

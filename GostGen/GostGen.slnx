@@ -1,0 +1,19 @@
+<Solution>
+    <Folder Name="/Container Items/">
+        <File Path="../.dockerignore" />
+        <File Path="../debug.sh" />
+        <File Path="../Dockerfile" />
+        <File Path="../README.md" />
+        <File Path="../run.sh" />
+    </Folder>
+    <Folder Name="/GitHub/">
+        <File Path="../.github/dependabot.yml" />
+        <File Path="../.github/workflows/build.yml" />
+    </Folder>
+    <Folder Name="/Solution Items/">
+        <File Path="../.gitignore" />
+        <File Path="Directory.Build.props" />
+    </Folder>
+    <Project Path="source/GostGen.csproj" />
+    <Project Path="tests/GostGen.Tests.csproj" />
+</Solution>
