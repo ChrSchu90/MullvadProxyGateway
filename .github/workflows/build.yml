@@ -20,7 +20,7 @@ env:
   NET_PUBLISH_DIR: GostGen/publish/
   NET_PUBLISH_ARGS: "--verbosity normal --configuration Release -p:DebugType=embedded -p:PublishSingleFile=true --self-contained"
   DOCKER_REGISTRY: ghcr.io
-  DOCKER_IMAGE_NAME: ${{ github.repository_owner }}/gostgen
+  DOCKER_IMAGE_NAME: ${{ github.repository_owner }}/mullvad-proxy-gateway
   DOCKER_PLATFORMS: linux/amd64,linux/arm/v7,linux/arm64/v8
 
 jobs:
