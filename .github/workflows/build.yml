@@ -70,8 +70,13 @@ jobs:
       if: ${{ steps.tagver.outputs.is_valid == 'true' }}
       run: dotnet publish ${{ env.NET_PROJECT }} -r linux-musl-arm64 ${{ env.NET_PUBLISH_ARGS }} -p:Version=${{ steps.tagver.outputs.version }} -o ${{ env.NET_PUBLISH_DIR }}linux/arm64/v8
 
-    - name: Docker Buildx Setup
+    - name: Set up QEMU
       if: ${{ steps.tagver.outputs.is_valid == 'true' }}
+      uses: docker/setup-qemu-action@v3
+      id: dockerqemu
+
+    - name: Docker Buildx Setup
+      if: ${{ steps.dockerqemu.outcome == 'success' }}
       uses: docker/setup-buildx-action@v3
       id: dockersetup
 
