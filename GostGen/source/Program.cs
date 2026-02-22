@@ -20,6 +20,9 @@ using Serilog.Events;
 /// </summary>
 public class Program
 {
+    private const string AutherMullvadGroup = "auther-mullvad";
+    private const string BypassMullvadGroup = "bypass-mullvad";
+
     private static LoggingLevelSwitch _logLevelSwitch = null!;
     private static GatewayConfig _gatewayConfig = null!;
 
@@ -32,11 +35,13 @@ public class Program
         try
         {
             InitLogging();
+
+            Log.Information($"Starting gost config generator v{Assembly.GetExecutingAssembly().GetName().Version?.ToString(3)}");
+
             var gatewayConfig = LoadGatewayConfig()!;
             if (gatewayConfig == null!) return;
             _gatewayConfig = gatewayConfig;
-
-            Log.Information($"Starting gost config generator v{Assembly.GetExecutingAssembly().GetName().Version?.ToString(3)}");
+            _logLevelSwitch.MinimumLevel = _gatewayConfig.GeneratorLogLevel;
 
             var gostConfig = await GetGostConfigAsync().ConfigureAwait(false);
             if (gostConfig == null) return;
@@ -79,46 +84,29 @@ public class Program
     {
         try
         {
-            GatewayConfig? config = null;
-            var envConfig = Environment.GetEnvironmentVariable(GatewayConfig.ConfigEnvVarName);
-            if (envConfig != null)
+            if (!File.Exists(GatewayConfig.ConfigYamlFileName) || new FileInfo(GatewayConfig.ConfigYamlFileName).Length < 1)
             {
-                Log.Information($"Loading gateway config from Environment Variable `{GatewayConfig.ConfigEnvVarName}`");
-                config = GatewayConfig.FromText(envConfig);
-            }
-            else if (File.Exists(GatewayConfig.ConfigYamlFileName))
-            {
-                Log.Information($"Loading gateway config from YAML file `{GatewayConfig.ConfigYamlFileName}`");
-                config = GatewayConfig.FromFile(GatewayConfig.ConfigYamlFileName);
-            }
-            else if (File.Exists(GatewayConfig.ConfigJsonFileName))
-            {
-                Log.Information($"Loading gateway config from JSON file `{GatewayConfig.ConfigJsonFileName}`");
-                config = GatewayConfig.FromFile(GatewayConfig.ConfigJsonFileName);
-            }
-
-            if (config == null)
-            {
-                Log.Error($"Unable to load a gateway configuration, define the config as Environment Variable `{GatewayConfig.ConfigEnvVarName}`, as YAML file `{GatewayConfig.ConfigYamlFileName}` or JSON file `{GatewayConfig.ConfigJsonFileName}`");
+                Log.Error($"Unable to load the gateway configuration `{GatewayConfig.ConfigYamlFileName}`!");
                 return null;
             }
 
+            var config = GatewayConfig.FromFile(GatewayConfig.ConfigYamlFileName);
             if (config.Validate(out var configError)) return config;
             Log.Error($"Gateway config is invalid ({configError})");
-            return null;
         }
         catch (Exception err)
         {
             Log.Fatal(err, "Error on loading gateway config");
-            return null;
         }
+
+        return null;
     }
 
     private static async Task<GostConfig?> GetGostConfigAsync()
     {
         try
         {
-            if (File.Exists(GostConfig.ConfigFile))
+            if (File.Exists(GostConfig.ConfigFile) && new FileInfo(GostConfig.ConfigFile).Length > 0)
             {
                 Log.Information($"Loading config `{GostConfig.ConfigFile}`");
                 return GostConfig.LoadYaml(await File.ReadAllTextAsync(GostConfig.ConfigFile).ConfigureAwait(false));
@@ -179,12 +167,9 @@ public class Program
         if (string.Equals(gostConfig.Log?.Level, _gatewayConfig.GostLogLevel.ToString()) &&
             string.Equals(gostConfig.Log?.Format, LogFormat) &&
             string.Equals(gostConfig.Log?.Output, LogOutput))
-        {
-            Log.Information("Gost logging config is already up to date");
             return Task.FromResult(false);
-        }
 
-        Log.Information("Updating gost logging config");
+        Log.Debug($"Updating gost logging level to `{_gatewayConfig.GostLogLevel}`");
         gostConfig.Log ??= new LogConfig();
         gostConfig.Log.Level = _gatewayConfig.GostLogLevel.ToString();
         gostConfig.Log.Format = LogFormat;
@@ -194,14 +179,88 @@ public class Program
 
     private static Task<bool> UpdateUsersAsync(GostConfig gostConfig)
     {
-        return Task.FromResult(false);
-        // ToDO: Update/Generate proxy users
+        var changed = false;
+        gostConfig.Authers ??= [];
+
+        var mullvadGroup = gostConfig.Authers.FirstOrDefault(a => string.Equals(a.Name, AutherMullvadGroup));
+        if (mullvadGroup == null)
+        {
+            Log.Debug($"Adding auther group `{AutherMullvadGroup}`");
+            mullvadGroup = new AutherConfig { Name = AutherMullvadGroup };
+            gostConfig.Authers.Add(mullvadGroup);
+            changed = true;
+        }
+
+        mullvadGroup.Auths ??= [];
+        foreach (var configUser in _gatewayConfig.Users)
+        {
+            var gostUser = mullvadGroup.Auths.FirstOrDefault(u => string.Equals(u.Username, configUser.Key));
+            if (gostUser == null)
+            {
+                Log.Debug($"Add new user `{configUser.Key}` to `{AutherMullvadGroup}`");
+                mullvadGroup.Auths.Add(new AuthConfig { Username = configUser.Key, Password = configUser.Value.Password });
+                changed = true;
+                continue;
+            }
+
+            if (!string.Equals(gostUser.Password, configUser.Value.Password))
+            {
+                Log.Debug($"Updating password for user `{configUser.Key}` to `{AutherMullvadGroup}`");
+                gostUser.Password = configUser.Value.Password;
+                changed = true;
+            }
+        }
+
+        foreach (var gostAuth in mullvadGroup.Auths.ToArray())
+        {
+            if (!string.IsNullOrWhiteSpace(gostAuth.Username) &&
+               _gatewayConfig.Users.ContainsKey(gostAuth.Username))
+                continue;
+
+            Log.Debug($"Removing user `{gostAuth.Username}` from `{AutherMullvadGroup}`");
+            changed = mullvadGroup.Auths.Remove(gostAuth);
+        }
+
+        return Task.FromResult(changed);
     }
 
     private static Task<bool> UpdateBypassesAsync(GostConfig gostConfig)
     {
-        return Task.FromResult(false);
-        // ToDO: Update/Generate bypasses
+        var changed = false;
+        gostConfig.Bypasses ??= [];
+
+        var bypassGroup = gostConfig.Bypasses.FirstOrDefault(a => string.Equals(a.Name, BypassMullvadGroup));
+        if (bypassGroup == null)
+        {
+            Log.Debug($"Adding bypass group `{BypassMullvadGroup}`");
+            bypassGroup = new BypassConfig { Name = BypassMullvadGroup };
+            gostConfig.Bypasses.Add(bypassGroup);
+            changed = true;
+        }
+
+        bypassGroup.Matchers ??= [];
+        foreach (var configBypass in _gatewayConfig.Bypasses)
+        {
+            var mullvadBypass = bypassGroup.Matchers.FirstOrDefault(u => string.Equals(u, configBypass, StringComparison.OrdinalIgnoreCase));
+            if (mullvadBypass == null)
+            {
+                Log.Debug($"Add new bypass `{configBypass}` to `{BypassMullvadGroup}`");
+                bypassGroup.Matchers.Add(configBypass);
+                changed = true;
+            }
+        }
+
+        foreach (var gostBypass in bypassGroup.Matchers.ToArray())
+        {
+            if (!string.IsNullOrWhiteSpace(gostBypass) &&
+               _gatewayConfig.Bypasses.Contains(gostBypass, StringComparer.OrdinalIgnoreCase))
+                continue;
+
+            Log.Debug($"Removing bypass `{gostBypass}` from `{BypassMullvadGroup}`");
+            changed = bypassGroup.Matchers.Remove(gostBypass);
+        }
+
+        return Task.FromResult(changed);
     }
 
     private static Task<bool> UpdateLocalProxyAsync(GostConfig gostConfig)
@@ -232,7 +291,7 @@ public class Program
             foreach (var city in cities)
             {
                 var servers = city.Where(s => !string.IsNullOrWhiteSpace(s.SocksName)).OrderBy(c => c.Hostname);
-
+                // ToDo: Create/update/remove gost proxy server for each city
             }
         }
 

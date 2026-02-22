@@ -8,7 +8,7 @@ using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
 
 /// <summary>
-/// Gateway configuration, which can be loaded from a yaml, json file or from an environment variable.
+/// Gateway configuration, which can be loaded from a yaml, json content.
 /// The configuration can be used to control the behavior of the gateway.
 /// </summary>
 internal class GatewayConfig
@@ -19,16 +19,6 @@ internal class GatewayConfig
     /// The configuration yaml file name
     /// </summary>
     internal const string ConfigYamlFileName = "data/GatewayConfig.yaml";
-
-    /// <summary>
-    /// The configuration json file name
-    /// </summary>
-    internal const string ConfigJsonFileName = "data/GatewayConfig.json";
-
-    /// <summary>
-    /// The configuration environment variable name
-    /// </summary>
-    internal const string ConfigEnvVarName = "GATEWAY_CONFIG";
 
     #endregion
 

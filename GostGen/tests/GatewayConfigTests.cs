@@ -42,6 +42,14 @@ public sealed class GatewayConfigTests
         cfg.Users = [];
         Assert.IsFalse(cfg.Validate(out error), "Config validation should fail if no users are defined");
         Assert.IsNotNull(error, "Config validation error message should not be null if no users are defined");
+        cfg.Users.Add(" ", new());
+        Assert.IsFalse(cfg.Validate(out error), "Config validation should fail for user with empty user name");
+        Assert.IsNotNull(error, "Config validation error message should not be null for user with empty user name");
+        cfg.Users.Clear();
+        cfg.Users.Add("User1", new User { Password = string.Empty });
+        Assert.IsFalse(cfg.Validate(out error), "Config validation should fail for user with empty user password");
+        Assert.IsNotNull(error, "Config validation error message should not be null for user with empty user password");
+        cfg.Users = oldUsers;
     }
 
     private static string GetTestYaml()
