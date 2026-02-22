@@ -23,13 +23,15 @@ public class Program
     private const string AutherMullvadGroup = "auther-mullvad";
     private const string BypassMullvadGroup = "bypass-mullvad";
 
+    private const string ServiceLocalName = "service-local";
+
     private const string WireguardInterfaceName = "wg0-mullvad";
     private const string InputInterfaceName = "eth0";
     private const string SocksType = "socks5";
     private const string NetworkProtocol = "tcp";
 
-    private const int LocalProxyPort = 1080;
-    private const int CityServerPortStart = 1090;
+    private const int ProxyPortLocal = 1080;
+    private const int ProxyPortCitiesStart = 1090;
     private const int CityServerLimit = 9;
 
     private static LoggingLevelSwitch _logLevelSwitch = null!;
@@ -275,8 +277,31 @@ public class Program
 
     private static Task<bool> UpdateLocalProxyAsync(GostConfig gostConfig)
     {
-        return Task.FromResult(false);
-        // ToDO: Update/Generate local proxy
+        var changed = false;
+        gostConfig.Services ??= [];
+        var address = $":{ProxyPortLocal}";
+        var service = gostConfig.Services.FirstOrDefault(s => string.Equals(s.Name, ServiceLocalName));
+        if (service == null)
+        {
+            service = new() { Name = ServiceLocalName };
+            gostConfig.Services.Add(service);
+        }
+
+        if (!string.Equals(service.Addr, address) || 
+            !string.Equals(service.Interface, InputInterfaceName) ||
+            !string.Equals(service.Listener?.Type, NetworkProtocol) ||
+            !string.Equals(service.Handler?.Type, SocksType) ||
+            !string.Equals(service.Handler?.Auther, AutherMullvadGroup))
+        {
+            Log.Debug($"Updating local proxy configuration `{ServiceLocalName}`");
+            service.Addr = address;
+            service.Interface = InputInterfaceName;
+            service.Listener = new() { Type = NetworkProtocol };
+            service.Handler = new() { Type = SocksType, Auther = AutherMullvadGroup };
+            changed = true;
+        }
+
+        return Task.FromResult(changed);
     }
 
     private static async Task<bool> UpdateGostServersAsync(GostConfig gostConfig)
@@ -294,7 +319,7 @@ public class Program
         Log.Information("Start to create/update gost servers");
         var countries = relays.Where(r => !string.IsNullOrWhiteSpace(r.CountryName)).OrderBy(r => r.CountryName).GroupBy(r => r.CountryName).ToArray();
         Log.Debug($"Found {countries.Length} server countries");
-        var cityPortStart = CityServerPortStart;
+        var cityPortStart = ProxyPortCitiesStart;
         foreach (var country in countries)
         {
             var cities = country.Where(r => !string.IsNullOrWhiteSpace(r.CityName)).OrderBy(r => r.CityName).GroupBy(r => r.CityName).Where(g => g.Any()).ToArray();
@@ -302,8 +327,8 @@ public class Program
             foreach (var city in cities)
             {
                 var servers = city.Where(s => !string.IsNullOrWhiteSpace(s.SocksName)).OrderBy(c => c.Hostname);
-                
-                
+
+
 
                 // ToDo: Create/update/remove gost proxy server for each city
                 cityPortStart += (CityServerLimit + 1);
