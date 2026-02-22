@@ -34,8 +34,9 @@ COPY --chmod=755 GostGen/publish/${BUILDPLATFORM} .
 HEALTHCHECK --interval=15s --timeout=5s --retries=3 --start-period=10s CMD \
   sh -c "curl -fs https://am.i.mullvad.net/json | grep -q '\"mullvad_exit_ip\":true'"
 
-# 1080 = local proxy
-EXPOSE 1080
+# TCP 1080 = local proxy
+# TCP 2000-3000 = Mullvad City proxies
+EXPOSE 1080 2000-3000
 
 VOLUME ["/data"]
 CMD [ "/run.sh" ]

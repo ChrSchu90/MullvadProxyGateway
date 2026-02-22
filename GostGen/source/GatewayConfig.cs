@@ -11,14 +11,14 @@ using YamlDotNet.Serialization.NamingConventions;
 /// Gateway configuration, which can be loaded from a yaml, json content.
 /// The configuration can be used to control the behavior of the gateway.
 /// </summary>
-internal class GatewayConfig
+internal record GatewayConfig
 {
     #region Static Fields
 
     /// <summary>
     /// The configuration yaml file name
     /// </summary>
-    internal const string ConfigYamlFileName = "data/GatewayConfig.yaml";
+    internal const string ConfigYamlFileName = "data/gateway.yaml";
 
     #endregion
 
@@ -50,6 +50,7 @@ internal class GatewayConfig
     /// <summary>
     /// Gets or sets the users.
     /// </summary>
+    /// <remarks>Defined as dictionary for features that are user specific</remarks>
     public Dictionary<string, User> Users { get; set; } = [];
 
     /// <summary>
@@ -141,7 +142,7 @@ internal class GatewayConfig
 /// <summary>
 /// User configuration, with user specific info.
 /// </summary>
-public class User
+public record User
 {
     /// <summary>
     /// Gets or sets the password.

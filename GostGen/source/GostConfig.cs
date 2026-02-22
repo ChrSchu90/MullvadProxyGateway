@@ -8,6 +8,211 @@ using YamlDotNet.Core;
 using YamlDotNet.Core.Events;
 using YamlDotNet.Serialization;
 
+/// <summary>
+/// Gost (https://github.com/go-gost/gost) configuration serialization structures.
+/// </summary>
+internal record GostConfig
+{
+    /// <summary>
+    /// The configuration environment variable name
+    /// </summary>
+    internal const string ConfigFile = "data/gost.yaml";
+
+    [YamlMember(Alias = "log")]
+    public LogConfig? Log { get; set; }
+
+    [YamlMember(Alias = "authers")]
+    public List<AutherConfig>? Authers { get; set; }
+
+    [YamlMember(Alias = "bypasses")]
+    public List<BypassConfig>? Bypasses { get; set; }
+
+    [YamlMember(Alias = "services")]
+    public List<ServiceConfig>? Services { get; set; }
+
+    [YamlMember(Alias = "chains")]
+    public List<ChainConfig>? Chains { get; set; }
+
+    //[YamlMember(Alias = "hops")]
+    //public List<HopConfig> Hops? { get; set; }
+
+    //[YamlMember(Alias = "admissions")]
+    //public List<AdmissionConfig>? Admissions { get; set; }
+
+    //[YamlMember(Alias = "resolvers")]
+    //public List<ResolverConfig>? Resolvers { get; set; }
+
+    //[YamlMember(Alias = "hosts")]
+    //public List<HostsConfig>? Hosts { get; set; }
+
+    //[YamlMember(Alias = "ingresses")]
+    //public List<IngressConfig>? Ingresses { get; set; }
+
+    //[YamlMember(Alias = "routers")]
+    //public List<RouterConfig>? Routers { get; set; }
+
+    //[YamlMember(Alias = "sds")]
+    //public List<SDConfig>? SDs { get; set; }
+
+    //[YamlMember(Alias = "recorders")]
+    //public List<RecorderConfig>? Recorders { get; set; }
+
+    //[YamlMember(Alias = "limiters")]
+    //public List<LimiterConfig>? Limiters { get; set; }
+
+    //[YamlMember(Alias = "climiters")]
+    //public List<LimiterConfig>? CLimiters { get; set; }
+
+    //[YamlMember(Alias = "rlimiters")]
+    //public List<LimiterConfig>? RLimiters { get; set; }
+
+    //[YamlMember(Alias = "observers")]
+    //public List<ObserverConfig>? Observers { get; set; }
+
+    //[YamlMember(Alias = "loggers")]
+    //public List<LoggerConfig>? Loggers { get; set; }
+
+    //[YamlMember(Alias = "tls")]
+    //public TLSConfig? TLS { get; set; }
+
+    //[YamlMember(Alias = "profiling")]
+    //public ProfilingConfig? Profiling { get; set; }
+
+    //[YamlMember(Alias = "api")]
+    //public ApiConfig? API { get; set; }
+
+    //[YamlMember(Alias = "metrics")]
+    //public MetricsConfig? Metrics { get; set; }
+
+    /// <summary>
+    /// Loads the config from the given text.
+    /// </summary>
+    /// <param name="text">The yaml.</param>
+    /// <returns></returns>
+    internal static GostConfig LoadYaml(string text)
+    {
+        return new DeserializerBuilder()
+            .IgnoreUnmatchedProperties()
+            .WithTypeConverter(new GoDurationYamlTypeConverter())
+            .Build()
+            .Deserialize<GostConfig>(text);
+    }
+
+    /// <summary>
+    /// Converts the instance into a yaml formatted text.
+    /// </summary>
+    /// <param name="config">The configuration.</param>
+    /// <returns></returns>
+    internal static string ToYaml(GostConfig config)
+    {
+        return new SerializerBuilder()
+            .WithTypeConverter(new GoDurationYamlTypeConverter())
+            .ConfigureDefaultValuesHandling(DefaultValuesHandling.OmitNull)
+            .DisableAliases()
+            .Build()
+            .Serialize(config);
+    }
+}
+
+/// <summary>
+/// YamlDotNet converter that parses Go-style durations (time.Duration), e.g. "500ms", "10s", "1m30s", "2h".
+/// </summary>
+internal sealed class GoDurationYamlTypeConverter : IYamlTypeConverter
+{
+    private static readonly Regex PartRegex = new(@"(?<num>[+-]?\d+(?:\.\d+)?)(?<unit>ns|us|µs|ms|s|m|h)", RegexOptions.Compiled | RegexOptions.CultureInvariant);
+
+    /// <inheritdoc />
+    public bool Accepts(Type type) => type == typeof(TimeSpan) || type == typeof(TimeSpan?);
+
+    /// <inheritdoc />
+    public object? ReadYaml(IParser parser, Type type, ObjectDeserializer rootDeserializer)
+    {
+        if (parser.Current is Scalar scalar)
+        {
+            parser.MoveNext();
+            var text = scalar.Value;
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                return type == typeof(TimeSpan?) ? null : TimeSpan.Zero;
+            }
+
+            return ParseGoDuration(text);
+        }
+
+        // Let YamlDotNet handle non-scalars.
+        throw new YamlException(parser.Current?.Start ?? Mark.Empty, parser.Current?.End ?? Mark.Empty,
+            $"Expected scalar for Go duration, got {parser.Current?.GetType().Name ?? "null"}");
+    }
+
+    /// <inheritdoc />
+    public void WriteYaml(IEmitter emitter, object? value, Type type, ObjectSerializer serializer)
+    {
+        if (value is null)
+        {
+            emitter.Emit(new Scalar(string.Empty));
+            return;
+        }
+
+        if (value is TimeSpan ts)
+        {
+            // Emit as Go-like seconds if possible; otherwise fallback to TimeSpan.ToString().
+            // Keep it simple and round-trip safe.
+            emitter.Emit(new Scalar(ts.ToString()));
+            return;
+        }
+
+        emitter.Emit(new Scalar(value.ToString() ?? string.Empty));
+    }
+
+    private static TimeSpan ParseGoDuration(string input)
+    {
+        input = input.Trim();
+        if (input == "0") return TimeSpan.Zero;
+
+        var totalNanoseconds = 0.0;
+        var idx = 0;
+
+        foreach (Match m in PartRegex.Matches(input))
+        {
+            if (!m.Success) continue;
+            if (m.Index != idx)
+            {
+                // There is an unparsed gap -> invalid format (e.g. "10 s" or "abc")
+                throw new FormatException($"Invalid Go duration: '{input}'");
+            }
+
+            idx += m.Length;
+
+            var numStr = m.Groups["num"].Value;
+            var unit = m.Groups["unit"].Value;
+
+            if (!double.TryParse(numStr, NumberStyles.Float, CultureInfo.InvariantCulture, out var num))
+                throw new FormatException($"Invalid number in Go duration: '{input}'");
+
+            var factorNs = unit switch
+            {
+                "ns" => 1.0,
+                "us" => 1_000.0,
+                "µs" => 1_000.0,
+                "ms" => 1_000_000.0,
+                "s" => 1_000_000_000.0,
+                "m" => 60.0 * 1_000_000_000.0,
+                "h" => 3600.0 * 1_000_000_000.0,
+                _ => throw new FormatException($"Unknown unit in Go duration: '{input}'")
+            };
+
+            totalNanoseconds += num * factorNs;
+        }
+
+        if (idx != input.Length)
+            throw new FormatException($"Invalid Go duration: '{input}'");
+
+        // TimeSpan tick = 100ns
+        var ticks = (long)Math.Round(totalNanoseconds / 100.0, MidpointRounding.AwayFromZero);
+        return new TimeSpan(ticks);
+    }
+}
+
 internal record LogConfig
 {
     [YamlMember(Alias = "level")]
@@ -22,6 +227,7 @@ internal record LogConfig
     [YamlMember(Alias = "rotation")]
     public LogRotationConfig? Rotation { get; set; }
 }
+
 internal record LogRotationConfig
 {
     [YamlMember(Alias = "maxSize")]
@@ -39,6 +245,7 @@ internal record LogRotationConfig
     [YamlMember(Alias = "compress")]
     public bool? Compress { get; set; }
 }
+
 internal record LoggerConfig
 {
     [YamlMember(Alias = "name")]
@@ -47,12 +254,14 @@ internal record LoggerConfig
     [YamlMember(Alias = "log")]
     public LogConfig? Log { get; set; }
 }
+
 internal record ProfilingConfig
 {
     [YamlMember(Alias = "addr")]
     public string? Addr { get; set; }
 }
-internal record APIConfig
+
+internal record ApiConfig
 {
     [YamlMember(Alias = "addr")]
     public string? Addr { get; set; }
@@ -69,6 +278,7 @@ internal record APIConfig
     [YamlMember(Alias = "auther")]
     public string? Auther { get; set; }
 }
+
 internal record MetricsConfig
 {
     [YamlMember(Alias = "addr")]
@@ -83,6 +293,7 @@ internal record MetricsConfig
     [YamlMember(Alias = "auther")]
     public string? Auther { get; set; }
 }
+
 internal record TLSConfig
 {
     [YamlMember(Alias = "certFile")]
@@ -112,6 +323,7 @@ internal record TLSConfig
     [YamlMember(Alias = "organization")]
     public string? Organization { get; set; }
 }
+
 internal record TLSOptions
 {
     [YamlMember(Alias = "minVersion")]
@@ -126,6 +338,7 @@ internal record TLSOptions
     [YamlMember(Alias = "alpn")]
     public List<string>? ALPN { get; set; }
 }
+
 internal record PluginConfig
 {
     [YamlMember(Alias = "type")]
@@ -143,6 +356,7 @@ internal record PluginConfig
     [YamlMember(Alias = "token")]
     public string? Token { get; set; }
 }
+
 internal record AutherConfig
 {
     [YamlMember(Alias = "name")]
@@ -166,6 +380,7 @@ internal record AutherConfig
     [YamlMember(Alias = "plugin")]
     public PluginConfig? Plugin { get; set; }
 }
+
 internal record AuthConfig
 {
     [YamlMember(Alias = "username")]
@@ -177,6 +392,7 @@ internal record AuthConfig
     [YamlMember(Alias = "file")]
     public string? File { get; set; }
 }
+
 internal record SelectorConfig
 {
     [YamlMember(Alias = "strategy")]
@@ -188,6 +404,7 @@ internal record SelectorConfig
     [YamlMember(Alias = "failTimeout")]
     public TimeSpan? FailTimeout { get; set; }
 }
+
 internal record AdmissionConfig
 {
     [YamlMember(Alias = "name")]
@@ -217,6 +434,7 @@ internal record AdmissionConfig
     [YamlMember(Alias = "plugin")]
     public PluginConfig? Plugin { get; set; }
 }
+
 internal record BypassConfig
 {
     [YamlMember(Alias = "name")]
@@ -246,11 +464,13 @@ internal record BypassConfig
     [YamlMember(Alias = "plugin")]
     public PluginConfig? Plugin { get; set; }
 }
+
 internal record FileLoader
 {
     [YamlMember(Alias = "path")]
     public string? Path { get; set; }
 }
+
 internal record RedisLoader
 {
     [YamlMember(Alias = "addr")]
@@ -271,6 +491,7 @@ internal record RedisLoader
     [YamlMember(Alias = "type")]
     public string? Type { get; set; }
 }
+
 internal record HTTPLoader
 {
     [YamlMember(Alias = "url")]
@@ -279,6 +500,7 @@ internal record HTTPLoader
     [YamlMember(Alias = "timeout")]
     public TimeSpan? Timeout { get; set; }
 }
+
 internal record NameserverConfig
 {
     [YamlMember(Alias = "addr")]
@@ -308,6 +530,7 @@ internal record NameserverConfig
     [YamlMember(Alias = "only")]
     public string? Only { get; set; }
 }
+
 internal record ResolverConfig
 {
     [YamlMember(Alias = "name")]
@@ -319,6 +542,7 @@ internal record ResolverConfig
     [YamlMember(Alias = "plugin")]
     public PluginConfig? Plugin { get; set; }
 }
+
 internal record HostMappingConfig
 {
     [YamlMember(Alias = "ip")]
@@ -330,6 +554,7 @@ internal record HostMappingConfig
     [YamlMember(Alias = "aliases")]
     public List<string>? Aliases { get; set; }
 }
+
 internal record HostsConfig
 {
     [YamlMember(Alias = "name")]
@@ -353,6 +578,7 @@ internal record HostsConfig
     [YamlMember(Alias = "plugin")]
     public PluginConfig? Plugin { get; set; }
 }
+
 internal record IngressRuleConfig
 {
     [YamlMember(Alias = "hostname")]
@@ -361,6 +587,7 @@ internal record IngressRuleConfig
     [YamlMember(Alias = "endpoint")]
     public string? Endpoint { get; set; }
 }
+
 internal record IngressConfig
 {
     [YamlMember(Alias = "name")]
@@ -384,6 +611,7 @@ internal record IngressConfig
     [YamlMember(Alias = "plugin")]
     public PluginConfig? Plugin { get; set; }
 }
+
 internal record SDConfig
 {
     [YamlMember(Alias = "name")]
@@ -392,6 +620,7 @@ internal record SDConfig
     [YamlMember(Alias = "plugin")]
     public PluginConfig? Plugin { get; set; }
 }
+
 internal record RouterRouteConfig
 {
     [YamlMember(Alias = "net")]
@@ -403,6 +632,7 @@ internal record RouterRouteConfig
     [YamlMember(Alias = "gateway")]
     public string? Gateway { get; set; }
 }
+
 internal record RouterConfig
 {
     [YamlMember(Alias = "name")]
@@ -426,6 +656,7 @@ internal record RouterConfig
     [YamlMember(Alias = "plugin")]
     public PluginConfig? Plugin { get; set; }
 }
+
 internal record RecorderConfig
 {
     [YamlMember(Alias = "name")]
@@ -446,6 +677,7 @@ internal record RecorderConfig
     [YamlMember(Alias = "plugin")]
     public PluginConfig? Plugin { get; set; }
 }
+
 internal record FileRecorder
 {
     [YamlMember(Alias = "path")]
@@ -457,6 +689,7 @@ internal record FileRecorder
     [YamlMember(Alias = "rotation")]
     public LogRotationConfig? Rotation { get; set; }
 }
+
 internal record TCPRecorder
 {
     [YamlMember(Alias = "addr")]
@@ -465,6 +698,7 @@ internal record TCPRecorder
     [YamlMember(Alias = "timeout")]
     public TimeSpan? Timeout { get; set; }
 }
+
 internal record HTTPRecorder
 {
     [YamlMember(Alias = "url")]
@@ -476,6 +710,7 @@ internal record HTTPRecorder
     [YamlMember(Alias = "header")]
     public Dictionary<string, string>? Header { get; set; }
 }
+
 internal record RedisRecorder
 {
     [YamlMember(Alias = "addr")]
@@ -496,6 +731,7 @@ internal record RedisRecorder
     [YamlMember(Alias = "type")]
     public string? Type { get; set; }
 }
+
 internal record RecorderObject
 {
     [YamlMember(Alias = "name")]
@@ -507,6 +743,7 @@ internal record RecorderObject
     [YamlMember(Alias = "metadata")]
     public Dictionary<string, object?>? Metadata { get; set; }
 }
+
 internal record LimiterConfig
 {
     [YamlMember(Alias = "name")]
@@ -530,6 +767,7 @@ internal record LimiterConfig
     [YamlMember(Alias = "plugin")]
     public PluginConfig? Plugin { get; set; }
 }
+
 internal record ObserverConfig
 {
     [YamlMember(Alias = "name")]
@@ -538,6 +776,7 @@ internal record ObserverConfig
     [YamlMember(Alias = "plugin")]
     public PluginConfig? Plugin { get; set; }
 }
+
 internal record ListenerConfig
 {
     [YamlMember(Alias = "type")]
@@ -557,13 +796,14 @@ internal record ListenerConfig
 
     [YamlMember(Alias = "chainGroup")]
     public ChainGroupConfig? ChainGroup { get; set; }
-    
+
     [YamlMember(Alias = "tls")]
     public TLSConfig? TLS { get; set; }
 
     [YamlMember(Alias = "metadata")]
     public Dictionary<string, object?>? Metadata { get; set; }
 }
+
 internal record HandlerConfig
 {
     [YamlMember(Alias = "type")]
@@ -586,7 +826,7 @@ internal record HandlerConfig
 
     [YamlMember(Alias = "chainGroup")]
     public ChainGroupConfig? ChainGroup { get; set; }
-    
+
     [YamlMember(Alias = "tls")]
     public TLSConfig? TLS { get; set; }
 
@@ -599,6 +839,7 @@ internal record HandlerConfig
     [YamlMember(Alias = "metadata")]
     public Dictionary<string, object?>? Metadata { get; set; }
 }
+
 internal record ForwarderConfig
 {
     [YamlMember(Alias = "name")]
@@ -613,6 +854,7 @@ internal record ForwarderConfig
     [YamlMember(Alias = "nodes")]
     public List<ForwardNodeConfig>? Nodes { get; set; }
 }
+
 internal record ForwardNodeConfig
 {
     [YamlMember(Alias = "name")]
@@ -657,6 +899,7 @@ internal record ForwardNodeConfig
     [YamlMember(Alias = "metadata")]
     public Dictionary<string, object?>? Metadata { get; set; }
 }
+
 internal record NodeFilterConfig
 {
     [YamlMember(Alias = "host")]
@@ -668,6 +911,7 @@ internal record NodeFilterConfig
     [YamlMember(Alias = "path")]
     public string? Path { get; set; }
 }
+
 internal record NodeMatcherConfig
 {
     [YamlMember(Alias = "rule")]
@@ -676,6 +920,7 @@ internal record NodeMatcherConfig
     [YamlMember(Alias = "priority")]
     public int? Priority { get; set; }
 }
+
 internal record HTTPNodeConfig
 {
     [YamlMember(Alias = "host")]
@@ -693,6 +938,7 @@ internal record HTTPNodeConfig
     [YamlMember(Alias = "auth")]
     public AuthConfig? Auth { get; set; }
 }
+
 internal record TLSNodeConfig
 {
     [YamlMember(Alias = "serverName")]
@@ -704,6 +950,7 @@ internal record TLSNodeConfig
     [YamlMember(Alias = "options")]
     public TLSOptions? Options { get; set; }
 }
+
 internal record DialerConfig
 {
     [YamlMember(Alias = "type")]
@@ -718,6 +965,7 @@ internal record DialerConfig
     [YamlMember(Alias = "metadata")]
     public Dictionary<string, object?>? Metadata { get; set; }
 }
+
 internal record ConnectorConfig
 {
     [YamlMember(Alias = "type")]
@@ -732,11 +980,13 @@ internal record ConnectorConfig
     [YamlMember(Alias = "metadata")]
     public Dictionary<string, object?>? Metadata { get; set; }
 }
+
 internal record SockOptsConfig
 {
     [YamlMember(Alias = "mark")]
     public int? Mark { get; set; }
 }
+
 internal record ServiceConfig
 {
     [YamlMember(Alias = "name")]
@@ -805,6 +1055,7 @@ internal record ServiceConfig
     [YamlMember(Alias = "status")]
     public ServiceStatus? Status { get; set; }
 }
+
 internal record ServiceStatus
 {
     [YamlMember(Alias = "createTime")]
@@ -819,6 +1070,7 @@ internal record ServiceStatus
     [YamlMember(Alias = "stats")]
     public ServiceStats? Stats { get; set; }
 }
+
 internal record ServiceEvent
 {
     [YamlMember(Alias = "time")]
@@ -827,6 +1079,7 @@ internal record ServiceEvent
     [YamlMember(Alias = "msg")]
     public string? Msg { get; set; }
 }
+
 internal record ServiceStats
 {
     [YamlMember(Alias = "totalConns")]
@@ -844,6 +1097,7 @@ internal record ServiceStats
     [YamlMember(Alias = "outputBytes")]
     public ulong? OutputBytes { get; set; }
 }
+
 internal record ChainConfig
 {
     [YamlMember(Alias = "name")]
@@ -855,6 +1109,7 @@ internal record ChainConfig
     [YamlMember(Alias = "metadata")]
     public Dictionary<string, object?>? Metadata { get; set; }
 }
+
 internal record ChainGroupConfig
 {
     [YamlMember(Alias = "chains")]
@@ -863,6 +1118,7 @@ internal record ChainGroupConfig
     [YamlMember(Alias = "selector")]
     public SelectorConfig? Selector { get; set; }
 }
+
 internal record HopConfig
 {
     [YamlMember(Alias = "name")]
@@ -910,6 +1166,7 @@ internal record HopConfig
     [YamlMember(Alias = "metadata")]
     public Dictionary<string, object?>? Metadata { get; set; }
 }
+
 internal record NodeConfig
 {
     [YamlMember(Alias = "name")]
@@ -962,193 +1219,4 @@ internal record NodeConfig
 
     [YamlMember(Alias = "metadata")]
     public Dictionary<string, object?>? Metadata { get; set; }
-}
-
-internal record GostConfig
-{
-    /// <summary>
-    /// The configuration environment variable name
-    /// </summary>
-    internal const string ConfigFile = "data/gost.yaml";
-
-    [YamlMember(Alias = "log")]
-    public LogConfig? Log { get; set; }
-    
-    [YamlMember(Alias = "authers")]
-    public List<AutherConfig>? Authers { get; set; }
-
-    [YamlMember(Alias = "bypasses")]
-    public List<BypassConfig>? Bypasses { get; set; }
-
-    [YamlMember(Alias = "services")]
-    public List<ServiceConfig>? Services { get; set; }
-
-    [YamlMember(Alias = "chains")]
-    public List<ChainConfig>? Chains { get; set; }
-
-    //[YamlMember(Alias = "hops")]
-    //public List<HopConfig> Hops? { get; set; }
-
-    //[YamlMember(Alias = "admissions")]
-    //public List<AdmissionConfig>? Admissions { get; set; }
-
-    //[YamlMember(Alias = "resolvers")]
-    //public List<ResolverConfig>? Resolvers { get; set; }
-
-    //[YamlMember(Alias = "hosts")]
-    //public List<HostsConfig>? Hosts { get; set; }
-
-    //[YamlMember(Alias = "ingresses")]
-    //public List<IngressConfig>? Ingresses { get; set; }
-
-    //[YamlMember(Alias = "routers")]
-    //public List<RouterConfig>? Routers { get; set; }
-
-    //[YamlMember(Alias = "sds")]
-    //public List<SDConfig>? SDs { get; set; }
-
-    //[YamlMember(Alias = "recorders")]
-    //public List<RecorderConfig>? Recorders { get; set; }
-
-    //[YamlMember(Alias = "limiters")]
-    //public List<LimiterConfig>? Limiters { get; set; }
-
-    //[YamlMember(Alias = "climiters")]
-    //public List<LimiterConfig>? CLimiters { get; set; }
-
-    //[YamlMember(Alias = "rlimiters")]
-    //public List<LimiterConfig>? RLimiters { get; set; }
-
-    //[YamlMember(Alias = "observers")]
-    //public List<ObserverConfig>? Observers { get; set; }
-
-    //[YamlMember(Alias = "loggers")]
-    //public List<LoggerConfig>? Loggers { get; set; }
-
-    //[YamlMember(Alias = "tls")]
-    //public TLSConfig? TLS { get; set; }
-
-    //[YamlMember(Alias = "profiling")]
-    //public ProfilingConfig? Profiling { get; set; }
-
-    //[YamlMember(Alias = "api")]
-    //public APIConfig? API { get; set; }
-
-    //[YamlMember(Alias = "metrics")]
-    //public MetricsConfig? Metrics { get; set; }
-
-    internal static GostConfig LoadYaml(string yaml)
-    {
-        return new DeserializerBuilder()
-            .IgnoreUnmatchedProperties()
-            .WithTypeConverter(new GoDurationYamlTypeConverter())
-            .Build()
-            .Deserialize<GostConfig>(yaml);
-    }
-
-    internal static string ToYaml(GostConfig config)
-    {
-        return new SerializerBuilder()
-            .WithTypeConverter(new GoDurationYamlTypeConverter())
-            .ConfigureDefaultValuesHandling(DefaultValuesHandling.OmitNull)
-            .DisableAliases()
-            .Build()
-            .Serialize(config);
-    }
-}
-
-/// <summary>
-/// YamlDotNet converter that parses Go-style durations (time.Duration), e.g. "500ms", "10s", "1m30s", "2h".
-/// </summary>
-internal sealed class GoDurationYamlTypeConverter : IYamlTypeConverter
-{
-    private static readonly Regex PartRegex = new(@"(?<num>[+-]?\d+(?:\.\d+)?)(?<unit>ns|us|µs|ms|s|m|h)", RegexOptions.Compiled | RegexOptions.CultureInvariant);
-
-    public bool Accepts(Type type) => type == typeof(TimeSpan) || type == typeof(TimeSpan?);
-
-    public object? ReadYaml(IParser parser, Type type, ObjectDeserializer rootDeserializer)
-    {
-        if (parser.Current is Scalar scalar)
-        {
-            parser.MoveNext();
-            var text = scalar.Value;
-            if (string.IsNullOrWhiteSpace(text))
-            {
-                return type == typeof(TimeSpan?) ? null : TimeSpan.Zero;
-            }
-
-            return ParseGoDuration(text);
-        }
-
-        // Let YamlDotNet handle non-scalars.
-        throw new YamlException(parser.Current?.Start ?? Mark.Empty, parser.Current?.End ?? Mark.Empty,
-            $"Expected scalar for Go duration, got {parser.Current?.GetType().Name ?? "null"}");
-    }
-
-    public void WriteYaml(IEmitter emitter, object? value, Type type, ObjectSerializer serializer)
-    {
-        if (value is null)
-        {
-            emitter.Emit(new Scalar(string.Empty));
-            return;
-        }
-
-        if (value is TimeSpan ts)
-        {
-            // Emit as Go-like seconds if possible; otherwise fallback to TimeSpan.ToString().
-            // Keep it simple and round-trip safe.
-            emitter.Emit(new Scalar(ts.ToString()));
-            return;
-        }
-
-        emitter.Emit(new Scalar(value.ToString() ?? string.Empty));
-    }
-
-    internal static TimeSpan ParseGoDuration(string input)
-    {
-        input = input.Trim();
-        if (input == "0") return TimeSpan.Zero;
-
-        var totalNanoseconds = 0.0;
-        var idx = 0;
-
-        foreach (Match m in PartRegex.Matches(input))
-        {
-            if (!m.Success) continue;
-            if (m.Index != idx)
-            {
-                // There is an unparsed gap -> invalid format (e.g. "10 s" or "abc")
-                throw new FormatException($"Invalid Go duration: '{input}'");
-            }
-
-            idx += m.Length;
-
-            var numStr = m.Groups["num"].Value;
-            var unit = m.Groups["unit"].Value;
-
-            if (!double.TryParse(numStr, NumberStyles.Float, CultureInfo.InvariantCulture, out var num))
-                throw new FormatException($"Invalid number in Go duration: '{input}'");
-
-            var factorNs = unit switch
-                {
-                    "ns" => 1.0,
-                    "us" => 1_000.0,
-                    "µs" => 1_000.0,
-                    "ms" => 1_000_000.0,
-                    "s" => 1_000_000_000.0,
-                    "m" => 60.0 * 1_000_000_000.0,
-                    "h" => 3600.0 * 1_000_000_000.0,
-                    _ => throw new FormatException($"Unknown unit in Go duration: '{input}'")
-                };
-
-            totalNanoseconds += num * factorNs;
-        }
-
-        if (idx != input.Length)
-            throw new FormatException($"Invalid Go duration: '{input}'");
-
-        // TimeSpan tick = 100ns
-        var ticks = (long)Math.Round(totalNanoseconds / 100.0, MidpointRounding.AwayFromZero);
-        return new TimeSpan(ticks);
-    }
 }

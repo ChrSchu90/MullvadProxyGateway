@@ -8,6 +8,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Reflection;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Serilog;
@@ -31,8 +32,12 @@ public class Program
     private const string NetworkProtocol = "tcp";
 
     private const int ProxyPortLocal = 1080;
-    private const int ProxyPortCitiesStart = 1090;
-    private const int CityServerLimit = 9;
+    private const int ProxyPortCitiesStart = 2000;
+    private const int ProxyPortCitiesEnd = 3000;
+    private const int ProxiesServersPerCity = 9;
+    private const int ProxyPortsPerCity = ProxiesServersPerCity + 1;
+
+    private static readonly Regex AddressProtRegex = new(@":(?<port>\d+)$", RegexOptions.Compiled);
 
     private static LoggingLevelSwitch _logLevelSwitch = null!;
     private static GatewayConfig _gatewayConfig = null!;
@@ -287,7 +292,7 @@ public class Program
             gostConfig.Services.Add(service);
         }
 
-        if (!string.Equals(service.Addr, address) || 
+        if (!string.Equals(service.Addr, address) ||
             !string.Equals(service.Interface, InputInterfaceName) ||
             !string.Equals(service.Listener?.Type, NetworkProtocol) ||
             !string.Equals(service.Handler?.Type, SocksType) ||
@@ -319,22 +324,152 @@ public class Program
         Log.Information("Start to create/update gost servers");
         var countries = relays.Where(r => !string.IsNullOrWhiteSpace(r.CountryName)).OrderBy(r => r.CountryName).GroupBy(r => r.CountryName).ToArray();
         Log.Debug($"Found {countries.Length} server countries");
-        var cityPortStart = ProxyPortCitiesStart;
         foreach (var country in countries)
         {
             var cities = country.Where(r => !string.IsNullOrWhiteSpace(r.CityName)).OrderBy(r => r.CityName).GroupBy(r => r.CityName).Where(g => g.Any()).ToArray();
             Log.Verbose($"Found {cities.Length} cities in {country.Key}");
             foreach (var city in cities)
             {
-                var servers = city.Where(s => !string.IsNullOrWhiteSpace(s.SocksName)).OrderBy(c => c.Hostname);
+                var servers = city.Where(s => !string.IsNullOrWhiteSpace(s.SocksName)).OrderBy(c => c.Hostname).ToArray();
+                var servicePoolName = $"service-{city.First().CountryCode}-{city.First().CityCode}-pool".ToLower();
+                var chainPoolName = $"chain-{city.First().CountryCode}-{city.First().CityCode}-pool".ToLower();
+                var poolPort = FindNextFreeCityPortAreaStart(gostConfig, servicePoolName);
+                if (poolPort < 1) continue;
+                cfgChanged |= CreateOrUpdatePoolProxy(gostConfig, servers, servicePoolName, chainPoolName, poolPort);
+
+                var serverIndex = 1;
+                foreach (var server in servers)
+                {
+                    if (serverIndex >= ProxiesServersPerCity)
+                        break;
+
+                    var serviceCityName = $"service-{country.Key}-{city.Key}-{serverIndex}".ToLower();
+                    var chainCityName = $"chain-{country.Key}-{city.Key}-{serverIndex}".ToLower();
 
 
-
-                // ToDo: Create/update/remove gost proxy server for each city
-                cityPortStart += (CityServerLimit + 1);
+                    serverIndex++;
+                }
             }
         }
 
         return cfgChanged;
+    }
+
+    private static int FindNextFreeCityPortAreaStart(GostConfig gostConfig, string servicePoolName)
+    {
+        gostConfig.Services ??= [];
+
+        // Reuse existing poot port
+        var service = gostConfig.Services.FirstOrDefault(s => string.Equals(s.Name, servicePoolName, StringComparison.OrdinalIgnoreCase));
+        if (AddressProtRegex.IsMatch(service?.Addr ?? string.Empty))
+            return int.Parse(AddressProtRegex.Match(service!.Addr!).Groups["port"].Value);
+
+        // ToDo: More efficient way to find free port area that also supports free areas between used ports (e.g. 2000-2009 used, 2010-2019 free, 2020-2029 used -> assign next pool to 2010-2019)
+
+        // Find next free port area
+        var usedPorts = gostConfig.Services.Where(s => AddressProtRegex.IsMatch(s.Addr ?? string.Empty))
+            .Select(s => int.Parse(AddressProtRegex.Match(s.Addr!).Groups["port"].Value))
+            .Where(p => p >= ProxyPortCitiesStart).ToArray();
+        var lastPort = usedPorts.Any() ? usedPorts.Max() : ProxyPortCitiesStart;
+        if (lastPort + 1 % ProxyPortsPerCity != 0) lastPort = (lastPort / ProxyPortsPerCity + 1) * ProxyPortsPerCity; // Round up to next multiple of ProxyPortsPerCity (10)
+        lastPort = Math.Max(lastPort, ProxyPortCitiesStart);    // Limit to start of city proxy port area
+        if (lastPort + ProxyPortsPerCity < ProxyPortCitiesEnd)  // Limit to end of city proxy port area
+            return lastPort;
+
+        Log.Error($"Unable to find free port area for city pool `{servicePoolName}` since last used port `{lastPort}` is to close to end of city proxy port area ({ProxyPortCitiesStart}-{ProxyPortCitiesEnd})");
+        return -1;
+    }
+
+    private static bool CreateOrUpdatePoolProxy(GostConfig gostConfig, IEnumerable<MullvadRelay> servers, string servicePoolName, string chainPoolName, int port)
+    {
+        var cfgChanged = false;
+        gostConfig.Services ??= [];
+        var service = gostConfig.Services.FirstOrDefault(s => string.Equals(s.Name, servicePoolName, StringComparison.OrdinalIgnoreCase));
+        if (service == null)
+        {
+            Log.Debug($"Adding proxy pool `{servicePoolName}`");
+            service = new() { Name = servicePoolName };
+            gostConfig.Services.Add(service);
+            cfgChanged = true;
+        }
+
+        gostConfig.Chains ??= [];
+        var chain = gostConfig.Chains.FirstOrDefault(c => string.Equals(c.Name, chainPoolName, StringComparison.OrdinalIgnoreCase));
+        if (chain == null)
+        {
+            Log.Debug($"Adding proxy pool `{chainPoolName}`");
+            chain = new() { Name = chainPoolName };
+            gostConfig.Chains.Add(chain);
+            cfgChanged = true;
+        }
+
+        chain.Hops ??= [];
+        var hopName = $"hop-{chainPoolName}";
+        var hop = chain.Hops.FirstOrDefault(h => string.Equals(h.Name, hopName, StringComparison.OrdinalIgnoreCase));
+        if (hop == null)
+        {
+            Log.Debug($"Adding proxy hop `{hopName}`");
+            hop = new() { Name = hopName };
+            chain.Hops.Add(hop);
+            cfgChanged = true;
+        }
+
+        var portMatch = AddressProtRegex.Match(service.Addr ?? string.Empty);
+        if (!portMatch.Success || int.Parse(portMatch.Groups["port"].Value) < 1 ||
+            !string.Equals(service.Interface, InputInterfaceName) ||
+            !string.Equals(service.Listener?.Type, NetworkProtocol) ||
+            !string.Equals(service.Handler?.Type, SocksType) ||
+            !string.Equals(service.Handler?.Auther, AutherMullvadGroup) ||
+            !string.Equals(service.Handler?.Chain, chainPoolName))
+        {
+            Log.Debug($"Updating proxy pool `{servicePoolName}`");
+            service.Addr = $":{port}";
+            service.Interface = InputInterfaceName;
+            service.Listener = new() { Type = NetworkProtocol };
+            service.Handler = new() { Type = SocksType, Auther = AutherMullvadGroup, Chain = chainPoolName };
+            cfgChanged = true;
+        }
+
+        hop.Nodes ??= [];
+        var serverCnt = Math.Min(servers.Count(), ProxiesServersPerCity);
+        for (var i = 1; i <= serverCnt; i++)
+        {
+            var server = servers.ElementAt(i - 1);
+            var nodeName = $"node-{hopName}-{i}";
+            var node = hop.Nodes.FirstOrDefault(n => string.Equals(n.Name, nodeName, StringComparison.OrdinalIgnoreCase));
+            if(node == null)
+            {
+                Log.Debug($"Adding proxy node `{nodeName}`");
+                node = new() { Name = nodeName };
+                hop.Nodes.Add(node);
+                cfgChanged = true;
+            }
+
+            var svrAddress = $"{server.SocksName}:{server.SocksPort}";
+            if (!string.Equals(node.Bypass, BypassMullvadGroup) || 
+                !string.Equals(node.Addr, svrAddress) || 
+                !string.Equals(node.Connector?.Type, SocksType) || 
+                !string.Equals(node.Dialer?.Type, NetworkProtocol))
+            {
+                Log.Debug($"Updating proxy node `{nodeName}`");
+                node.Bypass = BypassMullvadGroup;
+                node.Addr = svrAddress;
+                node.Connector = new() { Type = SocksType };
+                node.Dialer = new() { Type = NetworkProtocol };
+                cfgChanged = true;
+            }
+        }
+
+        return cfgChanged;
+    }
+
+    private static bool CreateOrUpdatePoolProxy(GostConfig gostConfig, MullvadRelay servers, int port)
+    {
+        gostConfig.Services ??= [];
+
+
+
+
+        return false;
     }
 }
