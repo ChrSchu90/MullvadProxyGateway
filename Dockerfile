@@ -25,7 +25,6 @@ RUN set -eux; \
     chmod a+x /gost; \
     apk del .fetch-deps; \
     rm -rf /tmp/* /var/tmp/* /var/cache/distfiles/*;
-    
 
 # Add project binaries
 COPY --chmod=755 run.sh /run.sh

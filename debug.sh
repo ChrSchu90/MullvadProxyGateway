@@ -12,4 +12,4 @@ dotnet publish ${NET_PROJECT} -r linux-musl-x64 ${NET_BUILD_ARGS} -o ./GostGen/p
   dotnet publish ${NET_PROJECT} -r linux-musl-arm64 ${NET_BUILD_ARGS} -o ./GostGen/publish/linux/arm64/v8 && \
   docker buildx build --progress=plain --rm --platform linux/amd64,linux/arm/v7,linux/arm64/v8 -f ${DOCKER_FILE} -t ${IMAGE_NAME} . && \
   docker volume create mullvadproxygateway_data  && \
-  docker run --rm -it -v mullvadproxygateway_data:/data --cap-add NET_ADMIN --sysctl net.ipv4.conf.all.src_valid_mark=1 ${IMAGE_NAME}
+  docker run --rm -it -v mullvadproxygateway_data:/data -p 1080:1080 -p 2000-3000:2000-3000 --cap-add NET_ADMIN --sysctl net.ipv4.conf.all.src_valid_mark=1 ${IMAGE_NAME}
