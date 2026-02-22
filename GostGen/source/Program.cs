@@ -339,7 +339,7 @@ public class Program
                 var poolPort = FindNextFreeCityPortAreaStart(gostConfig, servicePoolName);
                 if (poolPort < 1) continue;
                 cfgChanged |= CreateOrUpdateProxy(gostConfig, servers, servicePoolName, chainPoolName, chainPoolHopName, chainPoolHopNodeName, poolPort);
-                
+
                 var serverCnt = Math.Min(servers.Length, ProxiesServersPerCity);
                 for (var i = 1; i <= serverCnt; i++)
                 {
@@ -372,7 +372,8 @@ public class Program
         var usedPorts = gostConfig.Services.Where(s => AddressProtRegex.IsMatch(s.Addr ?? string.Empty))
             .Select(s => int.Parse(AddressProtRegex.Match(s.Addr!).Groups["port"].Value))
             .Where(p => p >= ProxyPortCitiesStart).ToArray();
-        var lastPort = usedPorts.Any() ? usedPorts.Max() : ProxyPortCitiesStart;
+        if (!usedPorts.Any()) return ProxyPortCitiesStart;
+        var lastPort = usedPorts.Max();
         if (lastPort + 1 % ProxyPortsPerCity != 0) lastPort = (lastPort / ProxyPortsPerCity + 1) * ProxyPortsPerCity; // Round up to next multiple of ProxyPortsPerCity (10)
         lastPort = Math.Max(lastPort, ProxyPortCitiesStart);    // Limit to start of city proxy port area
         if (lastPort + ProxyPortsPerCity < ProxyPortCitiesEnd)  // Limit to end of city proxy port area
