@@ -331,23 +331,25 @@ public class Program
             foreach (var city in cities)
             {
                 var servers = city.Where(s => !string.IsNullOrWhiteSpace(s.SocksName)).OrderBy(c => c.Hostname).ToArray();
+                if (!servers.Any()) continue;
                 var servicePoolName = $"service-{city.First().CountryCode}-{city.First().CityCode}-pool".ToLower();
                 var chainPoolName = $"chain-{city.First().CountryCode}-{city.First().CityCode}-pool".ToLower();
+                var chainPoolHopName = $"hop-{chainPoolName}";
+                var chainPoolHopNodeName = $"node-{chainPoolHopName}" + "-{0}";
                 var poolPort = FindNextFreeCityPortAreaStart(gostConfig, servicePoolName);
                 if (poolPort < 1) continue;
-                cfgChanged |= CreateOrUpdatePoolProxy(gostConfig, servers, servicePoolName, chainPoolName, poolPort);
-
-                var serverIndex = 1;
-                foreach (var server in servers)
+                cfgChanged |= CreateOrUpdateProxy(gostConfig, servers, servicePoolName, chainPoolName, chainPoolHopName, chainPoolHopNodeName, poolPort);
+                
+                var serverCnt = Math.Min(servers.Length, ProxiesServersPerCity);
+                for (var i = 1; i <= serverCnt; i++)
                 {
-                    if (serverIndex >= ProxiesServersPerCity)
-                        break;
-
-                    var serviceCityName = $"service-{country.Key}-{city.Key}-{serverIndex}".ToLower();
-                    var chainCityName = $"chain-{country.Key}-{city.Key}-{serverIndex}".ToLower();
-
-
-                    serverIndex++;
+                    var server = servers[i - 1];
+                    var serviceCityName = $"service-{server.CountryCode}-{server.CityCode}-{i}".ToLower();
+                    var chainCityName = $"chain-{server.CountryCode}-{server.CityCode}-{i}".ToLower();
+                    var chainCityHopName = $"hop-{chainCityName}";
+                    var chainCityHopNodeName = $"node-{chainCityHopName}";
+                    var port = poolPort + i;
+                    cfgChanged |= CreateOrUpdateProxy(gostConfig, [server], serviceCityName, chainCityName, chainCityHopName, chainCityHopNodeName, port);
                 }
             }
         }
@@ -380,7 +382,7 @@ public class Program
         return -1;
     }
 
-    private static bool CreateOrUpdatePoolProxy(GostConfig gostConfig, IEnumerable<MullvadRelay> servers, string servicePoolName, string chainPoolName, int port)
+    private static bool CreateOrUpdateProxy(GostConfig gostConfig, IEnumerable<MullvadRelay> servers, string servicePoolName, string chainPoolName, string chainHopName, string chainHopNodeName, int port)
     {
         var cfgChanged = false;
         gostConfig.Services ??= [];
@@ -404,12 +406,11 @@ public class Program
         }
 
         chain.Hops ??= [];
-        var hopName = $"hop-{chainPoolName}";
-        var hop = chain.Hops.FirstOrDefault(h => string.Equals(h.Name, hopName, StringComparison.OrdinalIgnoreCase));
+        var hop = chain.Hops.FirstOrDefault(h => string.Equals(h.Name, chainHopName, StringComparison.OrdinalIgnoreCase));
         if (hop == null)
         {
-            Log.Debug($"Adding proxy hop `{hopName}`");
-            hop = new() { Name = hopName };
+            Log.Debug($"Adding proxy hop `{chainHopName}`");
+            hop = new() { Name = chainHopName };
             chain.Hops.Add(hop);
             cfgChanged = true;
         }
@@ -435,9 +436,9 @@ public class Program
         for (var i = 1; i <= serverCnt; i++)
         {
             var server = servers.ElementAt(i - 1);
-            var nodeName = $"node-{hopName}-{i}";
+            var nodeName = string.Format(chainHopNodeName, i);
             var node = hop.Nodes.FirstOrDefault(n => string.Equals(n.Name, nodeName, StringComparison.OrdinalIgnoreCase));
-            if(node == null)
+            if (node == null)
             {
                 Log.Debug($"Adding proxy node `{nodeName}`");
                 node = new() { Name = nodeName };
@@ -446,9 +447,9 @@ public class Program
             }
 
             var svrAddress = $"{server.SocksName}:{server.SocksPort}";
-            if (!string.Equals(node.Bypass, BypassMullvadGroup) || 
-                !string.Equals(node.Addr, svrAddress) || 
-                !string.Equals(node.Connector?.Type, SocksType) || 
+            if (!string.Equals(node.Bypass, BypassMullvadGroup) ||
+                !string.Equals(node.Addr, svrAddress) ||
+                !string.Equals(node.Connector?.Type, SocksType) ||
                 !string.Equals(node.Dialer?.Type, NetworkProtocol))
             {
                 Log.Debug($"Updating proxy node `{nodeName}`");
@@ -461,15 +462,5 @@ public class Program
         }
 
         return cfgChanged;
-    }
-
-    private static bool CreateOrUpdatePoolProxy(GostConfig gostConfig, MullvadRelay servers, int port)
-    {
-        gostConfig.Services ??= [];
-
-
-
-
-        return false;
     }
 }
