@@ -12,5 +12,5 @@ services:
     environment:
       TZ: Europe/Berlin # Set your timezone!
 volumes:
-  mullvadproxygateway_data:
+  mullvad-proxy-gateway_data:
     name: mullvad-proxy-gateway_data
