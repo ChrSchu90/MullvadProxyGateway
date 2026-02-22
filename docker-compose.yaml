@@ -1,0 +1,16 @@
+services:
+  mullvad-proxy-gateway:
+    image: ghcr.io/chrschu90/mullvad-proxy-gateway:latest
+    container_name: mullvad-proxy-gateway
+    restart: unless-stopped
+    volumes:
+      - mullvad-proxy-gateway_data:/data
+    cap_add:
+      - NET_ADMIN # Requirement for WireGuard client
+    sysctls:
+      net.ipv4.conf.all.src_valid_mark: 1 # Requirement for WireGuard client
+    environment:
+      TZ: Europe/Berlin # Set your timezone!
+volumes:
+  mullvadproxygateway_data:
+    name: mullvad-proxy-gateway_data
