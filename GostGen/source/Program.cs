@@ -1,8 +1,5 @@
 namespace GostGen;
 
-using Serilog;
-using Serilog.Core;
-using Serilog.Sinks.SystemConsole.Themes;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -13,7 +10,10 @@ using System.Reflection;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Serilog;
+using Serilog.Core;
 using Serilog.Events;
+using Serilog.Sinks.SystemConsole.Themes;
 
 /// <summary>
 /// App entry point
@@ -22,6 +22,15 @@ public class Program
 {
     private const string AutherMullvadGroup = "auther-mullvad";
     private const string BypassMullvadGroup = "bypass-mullvad";
+
+    private const string WireguardInterfaceName = "wg0-mullvad";
+    private const string InputInterfaceName = "eth0";
+    private const string SocksType = "socks5";
+    private const string NetworkProtocol = "tcp";
+
+    private const int LocalProxyPort = 1080;
+    private const int CityServerPortStart = 1090;
+    private const int CityServerLimit = 9;
 
     private static LoggingLevelSwitch _logLevelSwitch = null!;
     private static GatewayConfig _gatewayConfig = null!;
@@ -146,10 +155,11 @@ public class Program
         try
         {
             const string ApiUrl = "https://api.mullvad.net/www/relays/wireguard";
-            Log.Information($"Downloading Mullvad relays from {ApiUrl}", ApiUrl);
+            Log.Information($"Downloading Mullvad relays from {ApiUrl}");
             using var httpClient = new HttpClient();
             var json = await httpClient.GetStringAsync(ApiUrl).ConfigureAwait(false);
             var relays = JsonSerializer.Deserialize<List<MullvadRelay>>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            Log.Verbose($"Downloaded Mullvad relays:\n{json}");
             Log.Information($"Found {relays?.Count ?? 0} Mullvad WireGuard relays", relays?.Count ?? 0);
             return relays;
         }
@@ -283,15 +293,20 @@ public class Program
         var cfgChanged = false;
         Log.Information("Start to create/update gost servers");
         var countries = relays.Where(r => !string.IsNullOrWhiteSpace(r.CountryName)).OrderBy(r => r.CountryName).GroupBy(r => r.CountryName).ToArray();
-        Log.Verbose($"Found {countries.Length} server countries");
+        Log.Debug($"Found {countries.Length} server countries");
+        var cityPortStart = CityServerPortStart;
         foreach (var country in countries)
         {
-            var cities = country.Where(r => !string.IsNullOrWhiteSpace(r.CityName)).OrderBy(r => r.CityName).GroupBy(r => r.CityName).ToArray();
+            var cities = country.Where(r => !string.IsNullOrWhiteSpace(r.CityName)).OrderBy(r => r.CityName).GroupBy(r => r.CityName).Where(g => g.Any()).ToArray();
             Log.Verbose($"Found {cities.Length} cities in {country.Key}");
             foreach (var city in cities)
             {
                 var servers = city.Where(s => !string.IsNullOrWhiteSpace(s.SocksName)).OrderBy(c => c.Hostname);
+                
+                
+
                 // ToDo: Create/update/remove gost proxy server for each city
+                cityPortStart += (CityServerLimit + 1);
             }
         }
 
