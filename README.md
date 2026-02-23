@@ -32,6 +32,8 @@ Connection status is monitored via a healthcheck against [Mullvad Connection Che
 Finally, [gost](https://gost.run/en) starts with the generated `gost.yaml`. 
 Clients connect to the container IP and choose the desired location by using the corresponding city port.
 
+<img height="180" src="https://github.com/user-attachments/assets/b08004b9-43b6-4133-86c2-6e8520d482d3" />
+
 ## Setup 🛠️
 
 ### Data volume 📁
