@@ -38,7 +38,7 @@ Clients connect to the container IP and choose the desired location by using the
 A `data` volume must be attached to the container.
 The following configuration **files are required to run the container**:
 - WireGuard configuration (`wg0-mullvad.conf`)
-- Gost generator configuration (`gateway.yaml`)
+- Gateway configuration (`gateway.yaml`)
  
 ### Mullvad WireGuard config 🔐
 > [!TIP]
@@ -63,7 +63,7 @@ Endpoint = se-sto-wg-001.mullvad.net:51820
 PersistentKeepalive = 25
 ```
 
-### Gost Config Generator 🤖
+### Gateway config 🤖
 Configuration file options for the Gost Config Generator:
 | Name                           | Default       | Description                                                  | Allowed values                                                   |
 | ------------------------------ | ------------- | ------------------------------------------------------------ | ---------------------------------------------------------------- |
