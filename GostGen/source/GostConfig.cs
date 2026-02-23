@@ -402,7 +402,7 @@ internal record SelectorConfig
     public int? MaxFails { get; set; }
 
     [YamlMember(Alias = "failTimeout")]
-    public TimeSpan? FailTimeout { get; set; }
+    public string? FailTimeout { get; set; }
 }
 
 internal enum SelectorStrategy
