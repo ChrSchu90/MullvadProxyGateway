@@ -48,6 +48,11 @@ internal record GatewayConfig
     public GostLogLevel GostLogLevel { get; set; } = GostLogLevel.warn;
 
     /// <summary>
+    /// Gets or sets a value indicating whether metrics for gost are enabled.
+    /// </summary>
+    public bool GostMetricsEnabled { get; set; }
+
+    /// <summary>
     /// Gets or sets the users.
     /// </summary>
     /// <remarks>Defined as dictionary for features that are user specific</remarks>
@@ -148,6 +153,21 @@ public record User
     /// Gets or sets the password.
     /// </summary>
     public string Password { get; set; } = null!;
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the user has access to mullvad proxies.
+    /// </summary>
+    public bool HasMullvadProxyAccess { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the user has access to the internal proxy.
+    /// </summary>
+    public bool HasInternalProxyAccess { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the user has access to the metrics server.
+    /// </summary>
+    public bool HasMetricsAccess { get; set; }
 }
 
 /// <summary>

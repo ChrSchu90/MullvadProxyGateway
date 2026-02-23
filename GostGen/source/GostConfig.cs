@@ -21,6 +21,9 @@ internal record GostConfig
     [YamlMember(Alias = "log")]
     public LogConfig? Log { get; set; }
 
+    [YamlMember(Alias = "metrics")]
+    public MetricsConfig? Metrics { get; set; }
+
     [YamlMember(Alias = "authers")]
     public List<AutherConfig>? Authers { get; set; }
 
@@ -80,9 +83,6 @@ internal record GostConfig
 
     //[YamlMember(Alias = "api")]
     //public ApiConfig? API { get; set; }
-
-    //[YamlMember(Alias = "metrics")]
-    //public MetricsConfig? Metrics { get; set; }
 
     /// <summary>
     /// Loads the config from the given text.

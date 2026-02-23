@@ -25,12 +25,16 @@ public class Program
 {
     private const string ExportCsvFile = "data/proxies.csv";
     private const string ExportJsonFile = "data/proxies.json";
+    private const string AutherMetricsGroup = "auther-metrics";
+    private const string AutherInternalGroup = "auther-internal";
     private const string AutherMullvadGroup = "auther-mullvad";
     private const string BypassMullvadGroup = "bypass-mullvad";
     private const string ServiceLocalName = "service-local";
     private const string SocksType = "socks5";
     private const string NetworkProtocol = "tcp";
+    private const string MetricsPath = "/metrics";
 
+    private const int MetricsPort = 9100;
     private const int ProxyPortLocal = 1080;
     private const int ProxyPortCitiesStart = 2000;
     private const int ProxyPortCitiesEnd = 3000;
@@ -69,6 +73,7 @@ public class Program
             var cfgChanged = await UpdateGostLoggingAsync(gostConfig);
             cfgChanged |= await UpdateUsersAsync(gostConfig);
             cfgChanged |= await UpdateBypassesAsync(gostConfig);
+            cfgChanged |= await UpdateMetricsServerAsync(gostConfig);
             cfgChanged |= await UpdateLocalProxyAsync(gostConfig);
             cfgChanged |= await UpdateGostServersAsync(gostConfig);
 
@@ -229,14 +234,37 @@ public class Program
             changed = true;
         }
 
+        var internalGroup = gostConfig.Authers.FirstOrDefault(a => string.Equals(a.Name, AutherInternalGroup));
+        if (internalGroup == null)
+        {
+            Log.Debug($"Adding auther group `{AutherInternalGroup}`");
+            internalGroup = new AutherConfig { Name = AutherInternalGroup };
+            gostConfig.Authers.Add(internalGroup);
+            changed = true;
+        }
+
+        var metricsGroup = gostConfig.Authers.FirstOrDefault(a => string.Equals(a.Name, AutherMetricsGroup));
+        if (metricsGroup == null)
+        {
+            Log.Debug($"Adding auther group `{AutherMetricsGroup}`");
+            metricsGroup = new AutherConfig { Name = AutherMetricsGroup };
+            gostConfig.Authers.Add(metricsGroup);
+            changed = true;
+        }
+
         mullvadGroup.Auths ??= [];
+        internalGroup.Auths ??= [];
+        metricsGroup.Auths ??= [];
         foreach (var configUser in _gatewayConfig.Users)
         {
+            // ToDo add users inside configured auth groups depending on user role
             var gostUser = mullvadGroup.Auths.FirstOrDefault(u => string.Equals(u.Username, configUser.Key));
             if (gostUser == null)
             {
                 Log.Debug($"Add new user `{configUser.Key}` to `{AutherMullvadGroup}`");
                 mullvadGroup.Auths.Add(new AuthConfig { Username = configUser.Key, Password = configUser.Value.Password });
+                internalGroup.Auths.Add(new AuthConfig { Username = configUser.Key, Password = configUser.Value.Password });
+                metricsGroup.Auths.Add(new AuthConfig { Username = configUser.Key, Password = configUser.Value.Password });
                 changed = true;
                 continue;
             }
@@ -252,7 +280,7 @@ public class Program
         foreach (var gostAuth in mullvadGroup.Auths.ToArray())
         {
             if (!string.IsNullOrWhiteSpace(gostAuth.Username) &&
-               _gatewayConfig.Users.ContainsKey(gostAuth.Username))
+                _gatewayConfig.Users.ContainsKey(gostAuth.Username))
                 continue;
 
             Log.Debug($"Removing user `{gostAuth.Username}` from `{AutherMullvadGroup}`");
@@ -301,6 +329,34 @@ public class Program
         return Task.FromResult(changed);
     }
 
+    private static Task<bool> UpdateMetricsServerAsync(GostConfig gostConfig)
+    {
+        var changed = false;
+        if (_gatewayConfig.GostMetricsEnabled)
+        {
+            var metricsAddress = $":{MetricsPort}";
+            gostConfig.Metrics ??= new();
+            if (gostConfig.Metrics.Addr != metricsAddress ||
+                !string.Equals(gostConfig.Metrics.Path, MetricsPath) ||
+                !string.Equals(gostConfig.Metrics.Auther, AutherMetricsGroup))
+            {
+                Log.Debug($"Enable metrics server at `user:pass@ip:{MetricsPort}?path=/metrics`");
+                gostConfig.Metrics.Addr = metricsAddress;
+                gostConfig.Metrics.Path = MetricsPath;
+                gostConfig.Metrics.Auther = AutherMetricsGroup;
+                changed = true;
+            }
+        }
+        else if (gostConfig.Metrics != null)
+        {
+            Log.Debug($"Disable metrics server at `user:pass@ip:{MetricsPort}?path=/metrics`");
+            gostConfig.Metrics = null;
+            changed = true;
+        }
+
+        return Task.FromResult(changed);
+    }
+
     private static Task<bool> UpdateLocalProxyAsync(GostConfig gostConfig)
     {
         var changed = false;
@@ -317,13 +373,13 @@ public class Program
             !string.Equals(service.Interface, InputInterfaceName) ||
             !string.Equals(service.Listener?.Type, NetworkProtocol) ||
             !string.Equals(service.Handler?.Type, SocksType) ||
-            !string.Equals(service.Handler?.Auther, AutherMullvadGroup))
+            !string.Equals(service.Handler?.Auther, AutherInternalGroup))
         {
             Log.Debug($"Updating local proxy configuration `{ServiceLocalName}`");
             service.Addr = address;
             service.Interface = InputInterfaceName;
             service.Listener = new() { Type = NetworkProtocol };
-            service.Handler = new() { Type = SocksType, Auther = AutherMullvadGroup };
+            service.Handler = new() { Type = SocksType, Auther = AutherInternalGroup };
             changed = true;
         }
 
@@ -359,9 +415,9 @@ public class Program
             }
         }
 
-        if (cfgChanged || !File.Exists(ExportCsvFile) || new FileInfo(ExportCsvFile).Length < 1) 
+        if (cfgChanged || !File.Exists(ExportCsvFile) || new FileInfo(ExportCsvFile).Length < 1)
             ExportProxyCsv(proxies);
-        if (cfgChanged || !File.Exists(ExportJsonFile) || new FileInfo(ExportJsonFile).Length < 1) 
+        if (cfgChanged || !File.Exists(ExportJsonFile) || new FileInfo(ExportJsonFile).Length < 1)
             ExportProxyJson(proxies);
 
         return cfgChanged;

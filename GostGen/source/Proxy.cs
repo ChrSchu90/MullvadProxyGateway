@@ -5,8 +5,6 @@
 /// </summary>
 internal record Proxy
 {
-    public Proxy() { }
-
     internal Proxy(bool isPool, MullvadRelay server, ServiceConfig service)
     {
         IsPool = isPool;
