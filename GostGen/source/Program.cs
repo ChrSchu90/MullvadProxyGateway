@@ -23,6 +23,8 @@ using Serilog.Sinks.SystemConsole.Themes;
 /// </summary>
 public class Program
 {
+    private const string ExportCsvFile = "data/proxies.csv";
+    private const string ExportJsonFile = "data/proxies.json";
     private const string AutherMullvadGroup = "auther-mullvad";
     private const string BypassMullvadGroup = "bypass-mullvad";
     private const string ServiceLocalName = "service-local";
@@ -71,7 +73,7 @@ public class Program
             cfgChanged |= await UpdateGostServersAsync(gostConfig);
 
             if (cfgChanged)
-                await SaveGostConfigAsync(gostConfig).ConfigureAwait(false);
+                _ = await SaveGostConfigAsync(gostConfig).ConfigureAwait(false);
             else
                 Log.Information("Gost config is already up to date");
         }
@@ -343,6 +345,8 @@ public class Program
         Log.Information("Start to create/update gost servers");
         var countries = relays.Where(r => !string.IsNullOrWhiteSpace(r.CountryName)).OrderBy(r => r.CountryName).GroupBy(r => r.CountryName).ToArray();
         Log.Debug($"Found {countries.Length} server countries");
+
+        ICollection<Proxy> proxies = new List<Proxy>();
         foreach (var country in countries)
         {
             var cities = country.Where(r => !string.IsNullOrWhiteSpace(r.CityName)).OrderBy(r => r.CityName).GroupBy(r => r.CityName).Where(g => g.Any()).ToArray();
@@ -351,14 +355,19 @@ public class Program
             {
                 var servers = city.Where(s => !string.IsNullOrWhiteSpace(s.SocksName)).OrderBy(c => c.Hostname).ToArray();
                 if (!servers.Any()) continue;
-                cfgChanged |= CreateOrUpdateProxy(gostConfig, city.First().CountryCode!, city.First().CityCode!, servers);
+                cfgChanged |= CreateOrUpdateProxy(gostConfig, city.First().CountryCode!, city.First().CityCode!, servers, ref proxies);
             }
         }
+
+        if (cfgChanged || !File.Exists(ExportCsvFile) || new FileInfo(ExportCsvFile).Length < 1) 
+            ExportProxyCsv(proxies);
+        if (cfgChanged || !File.Exists(ExportJsonFile) || new FileInfo(ExportJsonFile).Length < 1) 
+            ExportProxyJson(proxies);
 
         return cfgChanged;
     }
 
-    private static bool CreateOrUpdateProxy(GostConfig gostConfig, string countryCode, string cityCode, MullvadRelay[] servers)
+    private static bool CreateOrUpdateProxy(GostConfig gostConfig, string countryCode, string cityCode, MullvadRelay[] servers, ref ICollection<Proxy> proxies)
     {
         var cfgChanged = false;
         var servicePoolName = $"service-{countryCode}-{cityCode}-pool".ToLower();
@@ -377,6 +386,8 @@ public class Program
             gostConfig.Services.Add(poolService);
             cfgChanged = true;
         }
+
+        proxies.Add(new Proxy(true, servers.First(), poolService));
 
         if (poolService.Addr != poolServiceAddress ||
             !string.Equals(poolService.Interface, InputInterfaceName) ||
@@ -415,8 +426,8 @@ public class Program
 
         poolHop.Nodes ??= [];
         poolHop.Selector ??= new();
-        if (poolHop.Selector.Strategy != PoolSelectorStrategy || 
-            poolHop.Selector.MaxFails != PoolSelectorMaxFails || 
+        if (poolHop.Selector.Strategy != PoolSelectorStrategy ||
+            poolHop.Selector.MaxFails != PoolSelectorMaxFails ||
             poolHop.Selector.FailTimeout != PoolSelectorFailTimeout)
         {
             Log.Debug($"Updating pool selector of `{chainPoolHopName}`");
@@ -425,7 +436,7 @@ public class Program
             poolHop.Selector.FailTimeout = PoolSelectorFailTimeout;
             cfgChanged = true;
         }
-        
+
         var serverCnt = Math.Min(servers.Count(), ProxiesServersPerCity);
         for (var i = 1; i <= serverCnt; i++)
         {
@@ -434,7 +445,7 @@ public class Program
             var chainCityHopName = $"hop-{chainCityName}";
             var chainCityHopNodeName = $"node-{chainCityHopName}";
             var cityAddress = $":{poolPort + i}";
-            
+
             var cityService = gostConfig.Services.FirstOrDefault(s => string.Equals(s.Name, serviceCityName, StringComparison.OrdinalIgnoreCase));
             if (cityService == null)
             {
@@ -443,6 +454,8 @@ public class Program
                 gostConfig.Services.Add(cityService);
                 cfgChanged = true;
             }
+
+            proxies.Add(new Proxy(false, servers.First(), cityService));
 
             if (cityService.Addr != cityAddress ||
                 !string.Equals(cityService.Interface, InputInterfaceName) ||
@@ -541,7 +554,7 @@ public class Program
         return -1;
     }
 
-    public static string GetDefaultInterface()
+    private static string GetDefaultInterface()
     {
         return NetworkInterface.GetAllNetworkInterfaces()
                    .Where(i =>
@@ -550,5 +563,47 @@ public class Program
                        i.GetIPProperties().GatewayAddresses.Any(g => !Equals(g.Address, IPAddress.Any)))
                    .Select(i => i.Name)
                    .FirstOrDefault() ?? "eth0";
+    }
+
+    private static void ExportProxyCsv(ICollection<Proxy> proxies)
+    {
+        try
+        {
+            Log.Information($"Exporting proxy list to `{ExportCsvFile}`");
+            var csvString = "Country,City,Location Code,Port,Target\n" + string.Join("\n",
+                proxies.Select(p => $"\"{p.Server.CountryName}\"," +
+                                    $"\"{p.Server.CityName}\"," +
+                                    $"{p.Server.CountryCode}-{p.Server.CityCode}," +
+                                    $"{AddressProtRegex.Match(p.Service.Addr!).Groups["port"]}," +
+                                    $"{(p.IsPool ? "random" : p.Server.SocksName)}")) + "\n";
+
+            File.WriteAllText(ExportCsvFile, csvString);
+        }
+        catch (Exception err)
+        {
+            Log.Fatal(err, $"Error on exporting proxy csv {ExportCsvFile}");
+        }
+    }
+
+    private static void ExportProxyJson(ICollection<Proxy> proxies)
+    {
+        try
+        {
+            Log.Information($"Exporting proxy list to `{ExportJsonFile}`");
+            var export = proxies.Select(p => new
+            {
+                Country = p.Server.CountryName,
+                City = p.Server.CityName,
+                LocationCode = $"{p.Server.CountryCode}-{p.Server.CityCode}",
+                Port = int.Parse(AddressProtRegex.Match(p.Service.Addr!).Groups["port"].Value),
+                Target = p.IsPool ? "random" : p.Server.SocksName
+            });
+
+            File.WriteAllText(ExportJsonFile, JsonSerializer.Serialize(export, new JsonSerializerOptions { WriteIndented = true }));
+        }
+        catch (Exception err)
+        {
+            Log.Fatal(err, $"Error on exporting proxy json {ExportJsonFile}");
+        }
     }
 }
