@@ -5,7 +5,9 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Net.Http;
+using System.Net.NetworkInformation;
 using System.Reflection;
 using System.Text.Json;
 using System.Text.RegularExpressions;
@@ -23,11 +25,7 @@ public class Program
 {
     private const string AutherMullvadGroup = "auther-mullvad";
     private const string BypassMullvadGroup = "bypass-mullvad";
-
     private const string ServiceLocalName = "service-local";
-
-    private const string WireguardInterfaceName = "wg0-mullvad";
-    private const string InputInterfaceName = "eth0";
     private const string SocksType = "socks5";
     private const string NetworkProtocol = "tcp";
 
@@ -40,6 +38,7 @@ public class Program
     private const string PoolSelectorFailTimeout = "10s";
     private const SelectorStrategy PoolSelectorStrategy = SelectorStrategy.round;
 
+    private static readonly string InputInterfaceName = GetDefaultInterface();
     private static readonly Regex AddressProtRegex = new(@":(?<port>\d+)$", RegexOptions.Compiled);
 
     private static LoggingLevelSwitch _logLevelSwitch = null!;
@@ -540,5 +539,16 @@ public class Program
 
         Log.Error($"Unable to find free port area for city pool `{servicePoolName}` since last used port `{lastPort}` is to close to end of city proxy port area ({ProxyPortCitiesStart}-{ProxyPortCitiesEnd})");
         return -1;
+    }
+
+    public static string GetDefaultInterface()
+    {
+        return NetworkInterface.GetAllNetworkInterfaces()
+                   .Where(i =>
+                       i.OperationalStatus == OperationalStatus.Up &&
+                       i.NetworkInterfaceType != NetworkInterfaceType.Loopback &&
+                       i.GetIPProperties().GatewayAddresses.Any(g => !Equals(g.Address, IPAddress.Any)))
+                   .Select(i => i.Name)
+                   .FirstOrDefault() ?? "eth0";
     }
 }
