@@ -10,34 +10,35 @@ Turn a single Mullvad WireGuard client into a shared SOCKS5 proxy server that le
 Route the traffic from any device or application through it and connect seamlessly to any Mullvad location.
 
 ## Features ✔️
-- &#10003; Container healthcheck
-- &#10003; Proxy server for local connection
-- &#10003; Proxy server for each Mullvad City (max 9 per City)
-- &#10003; Random server pool for each Mullvad City
-- &#10003; Update of available servers (configurable)
-- &#10003; Configurable users
-- &#10003; Configurable bypasses (redirect Mullvad traffic local based on URL)
-- &#10007; Export of proxy list as CSV/Json
-- &#10007; Multiple WireGuard configs as connect fallback
+- ✅ Container healthcheck
+- ✅ Local SOCKS5 proxy
+- ✅ Dedicated proxy endpoints per Mullvad city (up to 9 per city)
+- ✅ Random server pool per Mullvad city
+- ✅ Updatable server list (configurable)
+- ✅ Configurable users
+- ✅ Configurable bypasses (route traffic locally for defined URLs)
+- ❌ Export proxy list as CSV/JSON
+- ❌ Multiple WireGuard configurations as fallback
 
 ## How it works 🏗️
-The container uses `GostGen` to generate/update the [Gost proxy server](https://gost.run/en) config `gost.yaml`. 
-Due to the large number of proxy servers, the resulting gost configuration becomes highly complex, exceeding 12k+ lines.
-The generator uses the [Mullvad API](https://api.mullvad.net/www/relays/wireguard) to optain the available servers, to ensure they are up to date.
+The container uses `GostGen` to create or update the `gost.yaml` configuration for the [Gost proxy server](https://gost.run/en).
+Because a large number of proxy endpoints is generated, the resulting configuration can become very large (12k+ lines).
+Available servers are fetched from the [Mullvad Relay API](https://api.mullvad.net/www/relays/wireguard) to keep endpoints up to date.
 
-Afterwards, `wg-quick` is used to start the WireGuard client `wg0-mullvad.conf` connection to Mullvad VPN. 
-This provides access to the Mullvad network, allowing retrieval of the SOCKS5 proxies, which are then used as exit nodes for the traffic.
-The connection is monitored by healthcheck against [Mullvad Connection Check](https://am.i.mullvad.net/json).
+After that, `wg-quick` starts the WireGuard connection using `wg0-mullvad.conf`.
+This connection provides access to the Mullvad network, where SOCKS5 proxies are used as exit nodes.
+Connection status is monitored via a healthcheck against [Mullvad Connection Check](https://am.i.mullvad.net/json).
 
-The generated `gost.yaml` file is then used to start the [Gost proxy server](https://gost.run/en), 
-which tunnels the traffic to the Mullvad proxy exit nodes. Clients can connect to any Mullvad city exit node 
-by using the Docker container as the proxy server address and selecting the corresponding city-specific port to choose the desired exit location.
+Finally, [gost](https://gost.run/en) starts with the generated `gost.yaml`. 
+Clients connect to the container IP and choose the desired location by using the corresponding city port.
 
 ## Setup 🛠️
 
 ### Data volume 📁
-The `data` volume contains the configuration for the WireGuard Client (`wg0-mullvad.conf`) and for the
-gost config generator (`gateway.yaml`).
+A `data` volume must be attached to the container.
+The following configuration **files are required to run the container**:
+- WireGuard configuration (`wg0-mullvad.conf`)
+- Gost generator configuration (`gateway.yaml`)
  
 ### Mullvad WireGuard config 🔐
 > [!TIP]
@@ -46,7 +47,7 @@ gost config generator (`gateway.yaml`).
 > to obtain the SOCKS5 proxies, which will then be used as the 
 > exit nodes for the traffic.
 
-To generate a config visit: https://mullvad.net/en/account/wireguard-config
+[Generate a WireGuard config](https://mullvad.net/en/account/wireguard-config)
 
 Example `wg0-mullvad.conf`:
 ```ini
@@ -63,8 +64,8 @@ PersistentKeepalive = 25
 ```
 
 ### Gost Config Generator 🤖
-Configuration file for the Gost Config Generator.
-| Name                           | Default       | Description                                                  | Limits                                                           |
+Configuration file options for the Gost Config Generator:
+| Name                           | Default       | Description                                                  | Allowed values                                                   |
 | ------------------------------ | ------------- | ------------------------------------------------------------ | ---------------------------------------------------------------- |
 | GeneratorLogLevel              | `Information` | Logging level of Gost Config Generator                       | `Verbose`, `Debug`, `Information`, `Warning`, `Error` or `Fatal` |
 | GeneratorAlwaysGenerateServers | `false`       | If `true` updates the proxy servers on every container start | `true` / `false`                                                 |
