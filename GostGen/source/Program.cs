@@ -159,6 +159,23 @@ public class Program
 
     private static async Task<IReadOnlyCollection<MullvadRelay>?> GetMullvadRelaysAsync()
     {
+        const string MullvadFile = "data/mullvad.json";
+        if (File.Exists(MullvadFile) && new FileInfo(MullvadFile).Length > 0)
+        {
+            try
+            {
+                Log.Verbose($"Lodaing Mullvad relays from file `{MullvadFile}`");
+                var relays = JsonSerializer.Deserialize<List<MullvadRelay>>(await File.ReadAllTextAsync(MullvadFile), new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                Log.Information($"Found {relays?.Count ?? 0} Mullvad relays", relays?.Count ?? 0);
+                return relays;
+            }
+            catch (Exception err)
+            {
+                Log.Fatal(err, $"Error on loading Mullvad relays from file `{MullvadFile}`");
+                return null;
+            }
+        }
+
         try
         {
             const string ApiUrl = "https://api.mullvad.net/www/relays/wireguard";

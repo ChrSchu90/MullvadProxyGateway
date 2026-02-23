@@ -396,13 +396,36 @@ internal record AuthConfig
 internal record SelectorConfig
 {
     [YamlMember(Alias = "strategy")]
-    public string? Strategy { get; set; }
+    public SelectorStrategy? Strategy { get; set; }
 
     [YamlMember(Alias = "maxFails")]
     public int? MaxFails { get; set; }
 
     [YamlMember(Alias = "failTimeout")]
     public TimeSpan? FailTimeout { get; set; }
+}
+
+internal enum SelectorStrategy
+{
+    /// <summary>
+    /// Round-robin
+    /// </summary>
+    round,
+
+    /// <summary>
+    /// Random
+    /// </summary>
+    rand,
+
+    /// <summary>
+    /// top-down fifo
+    /// </summary>
+    fifo,
+
+    /// <summary>
+    /// Based on a specific hash value (client IP or destination address)
+    /// </summary>
+    hash,
 }
 
 internal record AdmissionConfig
