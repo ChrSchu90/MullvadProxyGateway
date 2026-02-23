@@ -445,6 +445,7 @@ public class Program
             var chainCityHopName = $"hop-{chainCityName}";
             var chainCityHopNodeName = $"node-{chainCityHopName}";
             var cityAddress = $":{poolPort + i}";
+            var cityServer = servers.ElementAt(i - 1);
 
             var cityService = gostConfig.Services.FirstOrDefault(s => string.Equals(s.Name, serviceCityName, StringComparison.OrdinalIgnoreCase));
             if (cityService == null)
@@ -455,7 +456,7 @@ public class Program
                 cfgChanged = true;
             }
 
-            proxies.Add(new Proxy(false, servers.First(), cityService));
+            proxies.Add(new Proxy(false, cityServer, cityService));
 
             if (cityService.Addr != cityAddress ||
                 !string.Equals(cityService.Interface, InputInterfaceName) ||
@@ -492,7 +493,6 @@ public class Program
             }
 
             hop.Nodes ??= [];
-            var server = servers.ElementAt(i - 1);
             var node = hop.Nodes.FirstOrDefault(n => string.Equals(n.Name, chainCityHopNodeName, StringComparison.OrdinalIgnoreCase));
             if (node == null)
             {
@@ -502,7 +502,7 @@ public class Program
                 cfgChanged = true;
             }
 
-            var svrAddress = $"{server.SocksName}:{server.SocksPort}";
+            var svrAddress = $"{cityServer.SocksName}:{cityServer.SocksPort}";
             if (!string.Equals(node.Bypass, BypassMullvadGroup) ||
                 !string.Equals(node.Addr, svrAddress) ||
                 !string.Equals(node.Connector?.Type, SocksType) ||
