@@ -340,7 +340,7 @@ public class Program
                 !string.Equals(gostConfig.Metrics.Path, MetricsPath) ||
                 !string.Equals(gostConfig.Metrics.Auther, AutherMetricsGroup))
             {
-                Log.Debug($"Enable metrics server at `user:pass@ip:{MetricsPort}?path=/metrics`");
+                Log.Debug($"Enable metrics server, use `curl -v -u user:passwd http://ip:{MetricsPort}{MetricsPath}` for tests");
                 gostConfig.Metrics.Addr = metricsAddress;
                 gostConfig.Metrics.Path = MetricsPath;
                 gostConfig.Metrics.Auther = AutherMetricsGroup;
@@ -349,7 +349,7 @@ public class Program
         }
         else if (gostConfig.Metrics != null)
         {
-            Log.Debug($"Disable metrics server at `user:pass@ip:{MetricsPort}?path=/metrics`");
+            Log.Debug("Disable metrics server");
             gostConfig.Metrics = null;
             changed = true;
         }
