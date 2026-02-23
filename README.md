@@ -9,7 +9,7 @@
 Turn a single Mullvad WireGuard client into a shared SOCKS5 proxy server that lets you connect to any city provided by Mullvad. 
 Route the traffic from any device or application through it and connect seamlessly to any Mullvad location.
 
-<img height="180" src="https://github.com/user-attachments/assets/b08004b9-43b6-4133-86c2-6e8520d482d3" />
+<img height="180" src="https://github.com/user-attachments/assets/ec9d8b72-6827-4289-b076-c8b40f50fdd9" />
 
 ## Features ✔️
 - ✅ Container healthcheck
