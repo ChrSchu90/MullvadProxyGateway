@@ -30,7 +30,7 @@ RUN set -eux; \
 COPY --chmod=755 run.sh /run.sh
 COPY --chmod=755 GostGen/publish/${BUILDPLATFORM} .
 
-HEALTHCHECK --interval=15s --timeout=5s --retries=3 --start-period=10s CMD \
+HEALTHCHECK --interval=15s --timeout=5s --retries=3 --start-period=15s CMD \
   sh -c "curl -fs https://am.i.mullvad.net/json | grep -q '\"mullvad_exit_ip\":true'"
 
 # TCP 1080 = local proxy
