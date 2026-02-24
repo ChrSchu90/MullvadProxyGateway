@@ -402,10 +402,8 @@ public class Program
 
         var cfgChanged = false;
         Log.Information("Start to create/update GOST servers");
-        var countries = relays.Where(r => !string.IsNullOrWhiteSpace(r.CountryName)).OrderBy(r => r.CountryName).GroupBy(r => r.CountryName).ToArray();
-        Log.Debug($"Found {countries.Length} server countries");
-
         ICollection<Proxy> proxies = new List<Proxy>();
+        var countries = relays.Where(r => !string.IsNullOrWhiteSpace(r.CountryName)).OrderBy(r => r.CountryName).GroupBy(r => r.CountryName).ToArray();
         foreach (var country in countries)
         {
             var cities = country.Where(r => !string.IsNullOrWhiteSpace(r.CityName)).OrderBy(r => r.CityName).GroupBy(r => r.CityName).Where(g => g.Any()).ToArray();
@@ -665,4 +663,6 @@ public class Program
             Log.Fatal(err, $"Error on exporting proxy json {ExportJsonFile}");
         }
     }
+    
+    private record Proxy(bool IsPool, MullvadRelay Server, ServiceConfig Service);
 }
