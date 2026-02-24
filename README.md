@@ -69,18 +69,16 @@ PersistentKeepalive = 25
 
 ### Gateway config 🤖
 Configuration file options for the GOST Config Generator:
-| Name                           | Default       | Description                                                  | Allowed values                                                   |
-| ------------------------------ | ------------- | ------------------------------------------------------------ | ---------------------------------------------------------------- |
-| GeneratorLogLevel              | `Information` | Logging level of Gost Config Generator                       | `Verbose`, `Debug`, `Information`, `Warning`, `Error` or `Fatal` |
-| GeneratorAlwaysGenerateServers | `false`       | If `true` updates the proxy servers on every container start | `true` / `false`                                                 |
-| GostLogLevel                   | `warn`        | Logging level of Gost proxy server                           | `trace`, `debug`, `info`, `warn`, `error` or `fatal`             |
-| GostMetricsEnabled             | `false`       | [GOST Metrics](https://gost.run/en/tutorials/metrics/)       | `true` / `false`                                                 |
+| Name                  | Default       | Description                                                  | Allowed values                                                   |
+| --------------------- | ------------- | ------------------------------------------------------------ | ---------------------------------------------------------------- |
+| LogLevel              | `Information` | Logging level of Gost Config Generator                       | `Verbose`, `Debug`, `Information`, `Warning`, `Error` or `Fatal` |
+| AlwaysGenerateServers | `false`       | If `true` updates the proxy servers on every container start | `true` / `false`                                                 |
+| GostMetricsEnabled    | `false`       | [GOST Metrics](https://gost.run/en/tutorials/metrics/)       | `true` / `false`                                                 |
 
 Example `gateway.yaml`:
 ```yaml
-GeneratorLogLevel: Information
-GeneratorAlwaysGenerateServers: false
-GostLogLevel: warn
+LogLevel: Information
+AlwaysGenerateServers: false
 GostMetricsEnabled: false
 Users:
   User1:

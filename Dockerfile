@@ -10,7 +10,7 @@ RUN apk add --no-cache curl \
     sed -i 's|\[\[ $proto == -4 \]\] && cmd sysctl -q net\.ipv4\.conf\.all\.src_valid_mark=1|[[ $proto == -4 ]] \&\& [[ $(sysctl -n net.ipv4.conf.all.src_valid_mark) != 1 ]] \&\& cmd sysctl -q net.ipv4.conf.all.src_valid_mark=1|' /usr/bin/wg-quick && \
     rm -rf /tmp/* /var/tmp/* /var/cache/distfiles/*
 
-# Download and add ghost binary (https://github.com/go-gost/gost) for socks5 proxy server
+# Download and add GOST binary (https://github.com/go-gost/gost) for socks5 proxy server
 RUN set -eux; \
     apk add --no-cache --virtual .fetch-deps wget tar; \
     case "${BUILDPLATFORM}" in \

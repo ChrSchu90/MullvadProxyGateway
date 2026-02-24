@@ -1,9 +1,9 @@
-﻿namespace GostGen;
+﻿namespace GostGen.DTO;
 
 using System.Collections.Generic;
-using Serilog.Events;
 using System.IO;
 using System.Linq;
+using Serilog.Events;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
 
@@ -33,22 +33,17 @@ internal record GatewayConfig
     #region Properties
 
     /// <summary>
-    /// Gets the gostgen log level.
+    /// Gets the log level.
     /// </summary>
-    public LogEventLevel GeneratorLogLevel { get; set; } = LogEventLevel.Information;
+    public LogEventLevel LogLevel { get; set; } = LogEventLevel.Information;
 
     /// <summary>
-    /// Gets a value indicating whether gostgen should always re-generate the servers.
+    /// Gets a value indicating whether GostGen should always re-generate the servers.
     /// </summary>
-    public bool GeneratorAlwaysGenerateServers { get; set; }
+    public bool AlwaysGenerateServers { get; set; }
 
     /// <summary>
-    /// Gets or sets the gost log level.
-    /// </summary>
-    public GostLogLevel GostLogLevel { get; set; } = GostLogLevel.warn;
-
-    /// <summary>
-    /// Gets or sets a value indicating whether metrics for gost are enabled.
+    /// Gets or sets a value indicating whether metrics for GOST are enabled.
     /// </summary>
     public bool GostMetricsEnabled { get; set; }
 
@@ -86,6 +81,7 @@ internal record GatewayConfig
     {
         var config = new DeserializerBuilder()
             .WithNamingConvention(PascalCaseNamingConvention.Instance)
+            .IgnoreUnmatchedProperties()
             .Build()
             .Deserialize<GatewayConfig>(content);
 
@@ -126,14 +122,14 @@ internal record GatewayConfig
     {
         errorMessage = null;
         if (Bypasses.Count > 0 && Bypasses.Any(string.IsNullOrWhiteSpace))
-            errorMessage= "Bypasses cannot contain empty or whitespace entries";
+            errorMessage = "Bypasses cannot contain empty or whitespace entries";
 
         if (!Users.Any())
-            errorMessage= "At least 1 user has to be defined";
+            errorMessage = "At least 1 user has to be defined";
 
         if (Users.Any(u => string.IsNullOrWhiteSpace(u.Key) || Users.Any(p => string.IsNullOrWhiteSpace(p.Value.Password))))
-            errorMessage= "Every user requires a username and password";
-        
+            errorMessage = "Every user requires a username and password";
+
         return errorMessage == null;
     }
 
@@ -170,38 +166,3 @@ public record User
     public bool HasMetricsAccess { get; set; }
 }
 
-/// <summary>
-/// Gost log levels see: https://gost.run/en/tutorials/log/
-/// </summary>
-public enum GostLogLevel
-{
-    /// <summary>
-    /// More information than debug level output, useful for development debugging.
-    /// </summary>
-    trace,
-
-    /// <summary>
-    /// Output more information than info level, used to locate problems during development or use.
-    /// </summary>
-    debug,
-
-    /// <summary>
-    /// general infos.
-    /// </summary>
-    info,
-
-    /// <summary>
-    /// Warnings that you should be noticed.
-    /// </summary>
-    warn,
-
-    /// <summary>
-    /// General errors, the program runs normally
-    /// </summary>
-    error,
-
-    /// <summary>
-    /// The program will exit when this level of logging is output.
-    /// </summary>
-    fatal
-}

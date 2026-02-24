@@ -1,8 +1,9 @@
 ﻿namespace GostGen.Tests;
 
+using System.IO;
+using GostGen.DTO;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Serilog.Events;
-
 
 /// <summary>
 /// Test for <see cref="GatewayConfig"/>
@@ -11,19 +12,19 @@ using Serilog.Events;
 public sealed class GatewayConfigTests
 {
     [TestMethod]
-    public void Deserialization()
+    public void ConfigSerialization()
     {
         var jsonCfg = GatewayConfig.FromText(GetTestJson());
         var yamlCfg = GatewayConfig.FromText(GetTestYaml());
         Assert.AreEqual(jsonCfg.ToYaml(), yamlCfg.ToYaml(), "Yaml to Json deserialization difference");
         Assert.AreEqual(jsonCfg.ToJson(), yamlCfg.ToJson(), "Json to Yaml deserialization difference");
 
-        Assert.AreEqual(LogEventLevel.Debug, jsonCfg.GeneratorLogLevel, "Wrong log level inside Json");
-        Assert.AreEqual(LogEventLevel.Debug, yamlCfg.GeneratorLogLevel, "Wrong log level inside Yaml");
+        Assert.AreEqual(LogEventLevel.Debug, jsonCfg.LogLevel, "Wrong log level inside Json");
+        Assert.AreEqual(LogEventLevel.Debug, yamlCfg.LogLevel, "Wrong log level inside Yaml");
     }
 
     [TestMethod]
-    public void Validation()
+    public void ConfigValidation()
     {
         var cfg = GatewayConfig.FromText(GetTestJson());
         Assert.IsTrue(cfg.Validate(out var error), "Test config validation failed");
@@ -52,12 +53,26 @@ public sealed class GatewayConfigTests
         cfg.Users = oldUsers;
     }
 
+    [TestMethod]
+    public void GostGenLoading()
+    {
+        Directory.CreateDirectory(Path.GetDirectoryName(GatewayConfig.ConfigYamlFileName)!);
+        if(File.Exists(GatewayConfig.ConfigYamlFileName)) File.Delete(GatewayConfig.ConfigYamlFileName);
+        var config = Program.LoadGatewayConfig();
+        Assert.IsNull(config, "No gateway config is available, but a config has been returned");
+
+        var testConfig = GatewayConfig.FromText(GetTestYaml());
+        File.WriteAllText(GatewayConfig.ConfigYamlFileName, testConfig.ToYaml());
+        config = Program.LoadGatewayConfig();
+        Assert.IsNotNull(config, "Gateway config is not available, but should have been loaded from file");
+        Assert.AreEqual(testConfig.ToYaml(), config.ToYaml(), "Loaded gateway config does not match");
+    }
+
     private static string GetTestYaml()
     {
         return """
-               GeneratorLogLevel: Debug
-               GeneratorAlwaysGenerateServers: false
-               GostLogLevel: debug
+               LogLevel: Debug
+               AlwaysGenerateServers: false
                Users:
                  User1:
                    Password: Password1
@@ -73,9 +88,8 @@ public sealed class GatewayConfigTests
     {
         return """
                {
-                   "GeneratorLogLevel": "Debug",
-                   "GeneratorAlwaysGenerateServers": false,
-                   "GostLogLevel": "debug",
+                   "LogLevel": "Debug",
+                   "AlwaysGenerateServers": false,
                    "Users": {
                        "User1": { "Password": "Password1" },
                        "User2": { "Password": "Password2" }
