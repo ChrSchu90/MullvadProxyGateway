@@ -14,16 +14,18 @@ Route the traffic from any device or application through it and connect seamless
 ## Features ✔️
 - ✅ Container healthcheck
 - ✅ Local SOCKS5 proxy
-- ✅ Dedicated proxy endpoints per Mullvad city (up to 9 per city)
-- ✅ Random server pool per Mullvad city
-- ✅ Updatable server list (configurable)
+- ✅ Dedicated SOCKS5 proxy server per [Mullvad city](https://mullvad.net/en/servers?type=wireguard) (up to 9 per city)
+- ✅ One SOCKS5 proxy server pool per [Mullvad city](https://mullvad.net/en/servers?type=wireguard) with endpoint rotation
+- ✅ Updatable server list on container start (optional)
 - ✅ Configurable users
+- ✅ User roles (Mullvad proxy, local proxy and metrics)
 - ✅ Configurable bypasses (route traffic locally for defined URLs)
-- ❌ Export proxy list as CSV/JSON
+- ✅ Export proxy list as CSV and JSON
+- ✅ [GOST Prometheus Metrics](https://gost.run/en/tutorials/metrics/) (optional)
 - ❌ Multiple WireGuard configurations as fallback
 
 ## How it works 🏗️
-The container uses `GostGen` to create or update the `gost.yaml` configuration for the [Gost proxy server](https://gost.run/en).
+The container uses `GostGen` to create or update the `gost.yaml` configuration for the [GOST proxy server](https://gost.run/en).
 Because a large number of proxy endpoints is generated, the resulting configuration can become very large (12k+ lines).
 Available servers are fetched from the [Mullvad Relay API](https://api.mullvad.net/www/relays/wireguard) to keep endpoints up to date.
 
@@ -31,7 +33,7 @@ After that, `wg-quick` starts the WireGuard connection using `wg0-mullvad.conf`.
 This connection provides access to the Mullvad network, where SOCKS5 proxies are used as exit nodes.
 Connection status is monitored via a healthcheck against [Mullvad Connection Check](https://am.i.mullvad.net/json).
 
-Finally, [gost](https://gost.run/en) starts with the generated `gost.yaml`. 
+Finally, [GOST](https://gost.run/en) starts with the generated `gost.yaml` config. 
 Clients connect to the container IP and choose the desired location by using the corresponding city port.
 
 ## Setup 🛠️
@@ -66,23 +68,31 @@ PersistentKeepalive = 25
 ```
 
 ### Gateway config 🤖
-Configuration file options for the Gost Config Generator:
+Configuration file options for the GOST Config Generator:
 | Name                           | Default       | Description                                                  | Allowed values                                                   |
 | ------------------------------ | ------------- | ------------------------------------------------------------ | ---------------------------------------------------------------- |
 | GeneratorLogLevel              | `Information` | Logging level of Gost Config Generator                       | `Verbose`, `Debug`, `Information`, `Warning`, `Error` or `Fatal` |
 | GeneratorAlwaysGenerateServers | `false`       | If `true` updates the proxy servers on every container start | `true` / `false`                                                 |
 | GostLogLevel                   | `warn`        | Logging level of Gost proxy server                           | `trace`, `debug`, `info`, `warn`, `error` or `fatal`             |
+| GostMetricsEnabled             | `false`       | [GOST Metrics](https://gost.run/en/tutorials/metrics/)       | `true` / `false`                                                 |
 
 Example `gateway.yaml`:
 ```yaml
 GeneratorLogLevel: Information
 GeneratorAlwaysGenerateServers: false
 GostLogLevel: warn
+GostMetricsEnabled: false
 Users:
   User1:
     Password: Password1
+    HasMullvadProxyAccess: true
+    HasInternalProxyAccess: false
+    HasMetricsAccess: false
   User2:
     Password: Password2
+    HasMullvadProxyAccess: true
+    HasInternalProxyAccess: false
+    HasMetricsAccess: false
 Bypasses:
 - 'example.com'
 - '*.example.com'
@@ -98,6 +108,7 @@ services:
     restart: unless-stopped
     ports:
       - "1080:1080"             # Local proxy
+      - "9100:9100"             # Prometheus Metrics (optional)
       - "2000-3000:2000-3000"   # Dynamic Mullvad proxies
     volumes:
       - mullvad-proxy-gateway_data:/data
@@ -127,3 +138,18 @@ docker run -d \
 ```
 
 ## Exports 📤
+📄 CSV example:
+| Country  | City   | Location Code | Port | Target                                  |
+| -------- | ------ | ------------- | ---- | --------------------------------------  |
+| Albania  | Tirana | al-tia        | 2000 | random                                  |
+| Albania  | Tirana | al-tia        | 2001 | al-tia-wg-socks5-003.relays.mullvad.net |
+| Albania  | Tirana | al-tia        | 2002 | al-tia-wg-socks5-004.relays.mullvad.net |
+
+🗃️ JSON example:
+```json
+[ 
+  {"Country": "Albania", "City": "Tirana", "LocationCode": "al-tia", "Port": 2000, "Target": "random"},
+  {"Country": "Albania", "City": "Tirana", "LocationCode": "al-tia", "Port": 2001, "Target": "al-tia-wg-socks5-003.relays.mullvad.net"},
+  {"Country": "Albania", "City": "Tirana", "LocationCode": "al-tia", "Port": 2002, "Target": "al-tia-wg-socks5-004.relays.mullvad.net"}
+]
+```
