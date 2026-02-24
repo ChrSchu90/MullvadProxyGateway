@@ -2,10 +2,6 @@
 
 [![Build](https://github.com/ChrSchu90/MullvadProxyGateway/actions/workflows/build.yml/badge.svg)](https://github.com/ChrSchu90/MullvadProxyGateway/actions/workflows/build.yml)
 
-> [!Caution]
-> Project is mid development and not yet ready for production use.
-> Wait for the first stable release before using it!
-
 Turn a single Mullvad WireGuard client into a shared SOCKS5 proxy server that lets you connect to any city provided by Mullvad. 
 Route the traffic from any device or application through it and connect seamlessly to any Mullvad location.
 
@@ -22,26 +18,31 @@ Route the traffic from any device or application through it and connect seamless
 - ✅ Configurable bypasses (route traffic locally for defined URLs)
 - ✅ Export proxy list as CSV and JSON
 - ✅ [GOST Prometheus Metrics](https://gost.run/en/tutorials/metrics/) (optional)
-- ❌ Multiple WireGuard configurations as fallback
+- ✅ Multiple WireGuard configurations with connection check on container start
 
 ## How it works 🏗️
 The container uses `GostGen` to create or update the `gost.yaml` configuration for the [GOST proxy server](https://gost.run/en).
 Because a large number of proxy endpoints is generated, the resulting configuration can become very large (12k+ lines).
 Available servers are fetched from the [Mullvad Relay API](https://api.mullvad.net/www/relays/wireguard) to keep endpoints up to date.
 
-After that, `wg-quick` starts the WireGuard connection using `wg0-mullvad.conf`.
-This connection provides access to the Mullvad network, where SOCKS5 proxies are used as exit nodes.
-Connection status is monitored via a healthcheck against [Mullvad Connection Check](https://am.i.mullvad.net/json).
+Servers will be automatically added or updated when the container starts if AlwaysGenerateServers is enabled (disabled by default).
+If a new server is added to the Mullvad network, it will be assigned the next available port number after the last existing one. 
+This prevents changes to the port assignments of existing locations.
 
-Finally, [GOST](https://gost.run/en) starts with the generated `gost.yaml` config. 
-Clients connect to the container IP and choose the desired location by using the corresponding city port.
+After that, `wg-quick` starts the WireGuard connection.
+This connection provides access to the Mullvad network, where SOCKS5 proxies are used as exit nodes.
+The container connection status is monitored via healthcheck against [Mullvad Connection Check](https://am.i.mullvad.net/json).
+
+Finally, [GOST](https://gost.run/en) is started with the generated configuration. It provides a local SOCKS5 proxy as 
+well as proxy endpoints for all available Mullvad locations worldwide. Clients can connect to the container’s IP address 
+and select the desired target location by using the corresponding city-specific port.
 
 ## Setup 🛠️
 
 ### Data volume 📁
-A `data` volume must be attached to the container.
+A `data` volume must be mounted to the container.
 The following configuration **files are required to run the container**:
-- [WireGuard configuration](#mullvad-wireguard-config-) (`wg0-mullvad.conf`)
+- [WireGuard configuration(s)](#mullvad-wireguard-config-) (`*.conf`)
 - [Gateway configuration](#gateway-config-) (`gateway.yaml`)
  
 ### Mullvad WireGuard config 🔐
@@ -51,20 +52,25 @@ The following configuration **files are required to run the container**:
 > to obtain the SOCKS5 proxies, which will then be used as the 
 > exit nodes for the traffic.
 
-[Generate a WireGuard config](https://mullvad.net/en/account/wireguard-config)
+Open the [WireGuard configuration file generator](https://mullvad.net/en/account/wireguard-config) 
+and download multiple configuration files (for example, for Germany – Frankfurt).
 
-Example `wg0-mullvad.conf`:
+Place the downloaded configuration files in the data folder.
+Please note that the file names determine the order in which the connections are attempted, so name them accordingly (e.g., de-fra-wg-001.conf, de-fra-wg-002.conf, de-fra-wg-003.conf, etc.).
+
+You may also include configurations for different locations. The first successfully working configuration will be used.
+
+Example `de-fra-wg-001.conf`:
 ```ini
 [Interface]
 PrivateKey = YOUR_PRIVATE_KEY_HERE
-Address = 10.64.123.45/32, fc00:bbbb:bbbb:bb01::5:7b2d/128
+Address = 10.0.0.5/32, bbbb:bbbb:bbbb:bbbb::5:bbbb/128
 DNS = 10.64.0.1
 
 [Peer]
 PublicKey = SERVER_PUBLIC_KEY_HERE
 AllowedIPs = 0.0.0.0/0, ::/0
-Endpoint = se-sto-wg-001.mullvad.net:51820
-PersistentKeepalive = 25
+Endpoint = de-fra-wg-001.mullvad.net:51820
 ```
 
 ### Gateway config 🤖
