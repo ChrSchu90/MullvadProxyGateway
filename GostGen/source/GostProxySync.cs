@@ -157,7 +157,7 @@ internal class GostProxySync
         var servicePoolName = $"service-{countryCode}-{cityCode}-pool".ToLower();
         var chainPoolName = $"chain-{countryCode}-{cityCode}-pool".ToLower();
         var chainPoolHopName = $"hop-{chainPoolName}".ToLower();
-        var poolPort = FindNextFreeCityPortAreaStart(gostConfig, servicePoolName);
+        var poolPort = FindNextFreeCityPoolAreaStart(gostConfig, servicePoolName);
         if (poolPort < 1) return false;
         var poolServiceAddress = $":{poolPort}";
 
@@ -312,7 +312,7 @@ internal class GostProxySync
         return cfgChanged;
     }
 
-    internal static int FindNextFreeCityPortAreaStart(GostConfig gostConfig, string servicePoolName)
+    internal static int FindNextFreeCityPoolAreaStart(GostConfig gostConfig, string servicePoolName)
     {
         gostConfig.Services ??= [];
 
@@ -329,7 +329,7 @@ internal class GostProxySync
             .Where(p => p >= ProxyPortCitiesStart).ToArray();
         if (!usedPorts.Any()) return ProxyPortCitiesStart;
         var lastPort = usedPorts.Max();
-        if (lastPort + 1 % ProxyPortsPerCity != 0) lastPort = (lastPort / ProxyPortsPerCity + 1) * ProxyPortsPerCity; // Round up to next multiple of ProxyPortsPerCity (10)
+        if (lastPort + 1 % ProxyPortsPerCity != 0) lastPort = (lastPort / ProxyPortsPerCity + 1) * ProxyPortsPerCity; // Round up to next multiple of ProxyPortsPerCity (e.g. 10)
         lastPort = Math.Max(lastPort, ProxyPortCitiesStart);    // Limit to start of city proxy port area
         if (lastPort + ProxyPortsPerCity < ProxyPortCitiesEnd)  // Limit to end of city proxy port area
             return lastPort;

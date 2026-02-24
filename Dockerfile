@@ -1,6 +1,6 @@
 FROM --platform=$BUILDPLATFORM alpine:3.23
 ARG BUILDPLATFORM=linux/amd64
-ARG GOST_VERSION=3.1.0
+ARG GOST_VERSION=3.2.6
 
 # Install required tools, dotnet dependencies and wireguard dependencies + fixes
 RUN apk add --no-cache curl \
