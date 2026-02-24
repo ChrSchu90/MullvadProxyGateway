@@ -129,6 +129,7 @@ docker run -d \
   --name mullvad-proxy-gateway \
   --restart unless-stopped \
   -p 1080:1080 \
+  -p 9100:9100 \
   -p 2000-3000:2000-3000 \
   -v mullvad-proxy-gateway_data:/data \
   --cap-add=NET_ADMIN \
