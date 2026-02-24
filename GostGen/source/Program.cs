@@ -32,7 +32,6 @@ public class Program
     private const string ServiceLocalName = "service-local";
     private const string SocksType = "socks5";
     private const string NetworkProtocol = "tcp";
-    private const string MetricsPath = "/metrics";
 
     private const int MetricsPort = 9100;
     private const int ProxyPortLocal = 1080;
@@ -60,7 +59,7 @@ public class Program
         {
             InitLogging();
 
-            Log.Information($"Starting gost config generator v{Assembly.GetExecutingAssembly().GetName().Version?.ToString(3)}");
+            Log.Information($"Starting GOST config generator v{Assembly.GetExecutingAssembly().GetName().Version?.ToString(3)}");
 
             var gatewayConfig = LoadGatewayConfig()!;
             if (gatewayConfig == null!) return;
@@ -80,7 +79,7 @@ public class Program
             if (cfgChanged)
                 _ = await SaveGostConfigAsync(gostConfig).ConfigureAwait(false);
             else
-                Log.Information("Gost config is already up to date");
+                Log.Information("GOST config is already up to date");
         }
         catch (Exception err)
         {
@@ -153,15 +152,15 @@ public class Program
         try
         {
             // Write to temp file first and then move to target file to avoid damaged file when app is killed while writing
-            const string tmpFile = GostConfig.ConfigFile + ".tmp";
-            Log.Information($"Saving gost config to `{GostConfig.ConfigFile}`");
-            await File.WriteAllTextAsync(tmpFile, GostConfig.ToYaml(gostConfig)).ConfigureAwait(false);
-            File.Move(tmpFile, GostConfig.ConfigFile, true);
+            const string TmpFile = GostConfig.ConfigFile + ".tmp";
+            Log.Information($"Saving GOST config to `{GostConfig.ConfigFile}`");
+            await File.WriteAllTextAsync(TmpFile, GostConfig.ToYaml(gostConfig)).ConfigureAwait(false);
+            File.Move(TmpFile, GostConfig.ConfigFile, true);
             return true;
         }
         catch (Exception err)
         {
-            Log.Fatal(err, "Error on saving gost config");
+            Log.Fatal(err, "Error on saving GOST config");
             return false;
         }
     }
@@ -206,13 +205,13 @@ public class Program
     private static Task<bool> UpdateGostLoggingAsync(GostConfig gostConfig)
     {
         const string LogFormat = "text";
-        const string LogOutput = "stderr";
+        const string LogOutput = "stdout";
         if (string.Equals(gostConfig.Log?.Level, _gatewayConfig.GostLogLevel.ToString()) &&
             string.Equals(gostConfig.Log?.Format, LogFormat) &&
             string.Equals(gostConfig.Log?.Output, LogOutput))
             return Task.FromResult(false);
 
-        Log.Debug($"Updating gost logging level to `{_gatewayConfig.GostLogLevel}`");
+        Log.Debug($"Updating GOST logging level to `{_gatewayConfig.GostLogLevel}`");
         gostConfig.Log ??= new LogConfig();
         gostConfig.Log.Level = _gatewayConfig.GostLogLevel.ToString();
         gostConfig.Log.Format = LogFormat;
@@ -224,67 +223,70 @@ public class Program
     {
         var changed = false;
         gostConfig.Authers ??= [];
-
-        var mullvadGroup = gostConfig.Authers.FirstOrDefault(a => string.Equals(a.Name, AutherMullvadGroup));
-        if (mullvadGroup == null)
-        {
-            Log.Debug($"Adding auther group `{AutherMullvadGroup}`");
-            mullvadGroup = new AutherConfig { Name = AutherMullvadGroup };
-            gostConfig.Authers.Add(mullvadGroup);
-            changed = true;
-        }
-
-        var internalGroup = gostConfig.Authers.FirstOrDefault(a => string.Equals(a.Name, AutherInternalGroup));
-        if (internalGroup == null)
-        {
-            Log.Debug($"Adding auther group `{AutherInternalGroup}`");
-            internalGroup = new AutherConfig { Name = AutherInternalGroup };
-            gostConfig.Authers.Add(internalGroup);
-            changed = true;
-        }
-
-        var metricsGroup = gostConfig.Authers.FirstOrDefault(a => string.Equals(a.Name, AutherMetricsGroup));
-        if (metricsGroup == null)
-        {
-            Log.Debug($"Adding auther group `{AutherMetricsGroup}`");
-            metricsGroup = new AutherConfig { Name = AutherMetricsGroup };
-            gostConfig.Authers.Add(metricsGroup);
-            changed = true;
-        }
-
+        
+        // Ensure all auther groups are available
+        var mullvadGroup = AddAutherGroup(AutherMullvadGroup);
         mullvadGroup.Auths ??= [];
+        var internalGroup = AddAutherGroup(AutherInternalGroup);
         internalGroup.Auths ??= [];
+        var metricsGroup = AddAutherGroup(AutherMetricsGroup);
         metricsGroup.Auths ??= [];
+        AutherConfig AddAutherGroup(string groupName)
+        {
+            var group = gostConfig.Authers!.FirstOrDefault(a => string.Equals(a.Name, groupName));
+            if (group == null)
+            {
+                Log.Debug($"Adding auther group `{groupName}`");
+                group = new AutherConfig { Name = groupName };
+                gostConfig.Authers!.Add(group);
+                changed = true;
+            }
+
+            return group;
+        }
+
+        // Add and update users inside auther groups that have the matching role
         foreach (var configUser in _gatewayConfig.Users)
         {
-            // ToDo add users inside configured auth groups depending on user role
-            var gostUser = mullvadGroup.Auths.FirstOrDefault(u => string.Equals(u.Username, configUser.Key));
-            if (gostUser == null)
+            var auth = new AuthConfig { Username = configUser.Key, Password = configUser.Value.Password };
+            AddAndUpdateUsers(mullvadGroup, () => configUser.Value.HasMullvadProxyAccess);
+            AddAndUpdateUsers(internalGroup, () => configUser.Value.HasInternalProxyAccess);
+            AddAndUpdateUsers(metricsGroup, () => configUser.Value.HasMetricsAccess);
+            void AddAndUpdateUsers(AutherConfig group, Func<bool> hasAccess)
             {
-                Log.Debug($"Add new user `{configUser.Key}` to `{AutherMullvadGroup}`");
-                mullvadGroup.Auths.Add(new AuthConfig { Username = configUser.Key, Password = configUser.Value.Password });
-                internalGroup.Auths.Add(new AuthConfig { Username = configUser.Key, Password = configUser.Value.Password });
-                metricsGroup.Auths.Add(new AuthConfig { Username = configUser.Key, Password = configUser.Value.Password });
-                changed = true;
-                continue;
-            }
+                var groupUser = group.Auths!.FirstOrDefault(u => string.Equals(u.Username, auth.Username));
+                if (groupUser == null && hasAccess())
+                {
+                    Log.Debug($"Add user `{auth.Username}` to `{group.Name}`");
+                    group.Auths!.Add(auth);
+                    changed = true;
+                    return;
+                }
 
-            if (!string.Equals(gostUser.Password, configUser.Value.Password))
-            {
-                Log.Debug($"Updating password for user `{configUser.Key}` to `{AutherMullvadGroup}`");
-                gostUser.Password = configUser.Value.Password;
+                if (!hasAccess() || groupUser == null || groupUser == auth) return;
+                Log.Debug($"Update user `{auth.Username}` in `{group.Name}`");
+                groupUser.Password = auth.Password;
+                groupUser.File = null;
                 changed = true;
             }
         }
 
-        foreach (var gostAuth in mullvadGroup.Auths.ToArray())
+        // Remove users that lack auther group role or do not exist anymore
+        RemoveUsers(mullvadGroup, u => u.HasMullvadProxyAccess);
+        RemoveUsers(internalGroup, u => u.HasInternalProxyAccess);
+        RemoveUsers(metricsGroup, u => u.HasMetricsAccess);
+        void RemoveUsers(AutherConfig group, Func<User, bool> hasAccess)
         {
-            if (!string.IsNullOrWhiteSpace(gostAuth.Username) &&
-                _gatewayConfig.Users.ContainsKey(gostAuth.Username))
-                continue;
+            foreach (var groupAuth in group.Auths!.ToArray())
+            {
+                if (!string.IsNullOrWhiteSpace(groupAuth.Username) &&
+                    _gatewayConfig.Users.TryGetValue(groupAuth.Username, out var cfgUser) &&
+                    hasAccess(cfgUser))
+                    continue;
 
-            Log.Debug($"Removing user `{gostAuth.Username}` from `{AutherMullvadGroup}`");
-            changed = mullvadGroup.Auths.Remove(gostAuth);
+                Log.Debug($"Removing user `{groupAuth.Username}` from `{group.Name}`");
+                changed |= group.Auths!.Remove(groupAuth);
+            }
         }
 
         return Task.FromResult(changed);
@@ -331,6 +333,7 @@ public class Program
 
     private static Task<bool> UpdateMetricsServerAsync(GostConfig gostConfig)
     {
+        const string MetricsPath = "/metrics";
         var changed = false;
         if (_gatewayConfig.GostMetricsEnabled)
         {
@@ -390,7 +393,7 @@ public class Program
     {
         if (!_gatewayConfig.GeneratorAlwaysGenerateServers && gostConfig.Services?.Any() == true && gostConfig.Chains?.Any() == true)
         {
-            Log.Information("Skip update of gost servers");
+            Log.Information("Skip update of GOST servers");
             return false;
         }
 
@@ -398,7 +401,7 @@ public class Program
         if (relays?.Any() != true) return false;
 
         var cfgChanged = false;
-        Log.Information("Start to create/update gost servers");
+        Log.Information("Start to create/update GOST servers");
         var countries = relays.Where(r => !string.IsNullOrWhiteSpace(r.CountryName)).OrderBy(r => r.CountryName).GroupBy(r => r.CountryName).ToArray();
         Log.Debug($"Found {countries.Length} server countries");
 
