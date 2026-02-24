@@ -41,8 +41,8 @@ Clients connect to the container IP and choose the desired location by using the
 ### Data volume 📁
 A `data` volume must be attached to the container.
 The following configuration **files are required to run the container**:
-- WireGuard configuration (`wg0-mullvad.conf`)
-- Gateway configuration (`gateway.yaml`)
+- [WireGuard configuration](#mullvad-wireguard-config) (`wg0-mullvad.conf`)
+- [Gateway configuration](#gateway-config) (`gateway.yaml`)
  
 ### Mullvad WireGuard config 🔐
 > [!TIP]
