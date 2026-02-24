@@ -37,6 +37,9 @@ Finally, [GOST](https://gost.run/en) is started with the generated configuration
 well as proxy endpoints for all available Mullvad locations worldwide. Clients can connect to the container’s IP address 
 and select the desired target location by using the corresponding city-specific port.
 
+After connecting to the proxy, you can verify the connection by visiting the
+[Mullvad Connection check](https://mullvad.net/en/check) in your browser.
+
 ## Setup 🛠️
 
 ### Data volume 📁
