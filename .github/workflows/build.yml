@@ -101,6 +101,8 @@ jobs:
           type=raw,value=${{ steps.tagver.outputs.major }}.${{ steps.tagver.outputs.minor }},enable=${{ steps.tagver.outputs.is_release == 'true' }}
           type=raw,value=latest,enable=${{ steps.tagver.outputs.is_release == 'true' }}
           type=raw,value=preview-${{ steps.tagver.outputs.version }}-${{ steps.tagver.outputs.suffix }},enable=${{ steps.tagver.outputs.is_prerelease == 'true' }}
+          type=raw,value=preview-${{ steps.tagver.outputs.major }},enable=${{ steps.tagver.outputs.is_prerelease == 'true' }}
+          type=raw,value=preview-${{ steps.tagver.outputs.major }}.${{ steps.tagver.outputs.minor }},enable=${{ steps.tagver.outputs.is_prerelease == 'true' }}
           type=raw,value=preview,enable=${{ steps.tagver.outputs.is_prerelease == 'true' }}
 
     - name: Docker build/push
