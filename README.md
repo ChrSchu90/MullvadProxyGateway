@@ -114,6 +114,21 @@ ProxyFilter:                        # Optional: Proxy server filter
 
 ### Docker examples 🐳
 
+This image follows semantic versioning.
+
+#### Stable
+- `latest` – Most recent stable release
+- `1` – Latest stable release in major version `1`
+- `1.1` – Latest stable release in minor version `1.1`
+- `1.1.1` – Specific stable patch version (fully pinned)
+
+#### Preview
+- `preview` – Latest preview build
+- `1-preview` – Latest preview for major version `1`
+- `1.1-preview` – Latest preview for minor version `1.1`
+- `1.1.1-preview` – Latest preview for patch version `1.1.1`
+- `1.1.1-beta.1` – Specific preview build
+
 #### Compose 🧩:
 
 ```yaml
@@ -155,6 +170,8 @@ docker run -d \
   -e TZ=Europe/Berlin \
   ghcr.io/chrschu90/mullvad-proxy-gateway:latest
 ```
+
+Use specific version tags for reproducibility. Preview tags are not recommended for production.
 
 ## Exports 📤
 To easyly generate importable proxy lists for other applications, the container exports the available Mullvad proxies as CSV and JSON files.
