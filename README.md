@@ -8,10 +8,12 @@ Route the traffic from any device or application through it and connect seamless
 <img height="180" src="https://github.com/user-attachments/assets/ec9d8b72-6827-4289-b076-c8b40f50fdd9" />
 
 ## Features ✔️
+
 - ✅ Container healthcheck
 - ✅ Local SOCKS5 proxy
 - ✅ Dedicated SOCKS5 proxy server per [Mullvad city](https://mullvad.net/en/servers?type=wireguard) (up to 9 per city)
 - ✅ One SOCKS5 proxy server pool per [Mullvad city](https://mullvad.net/en/servers?type=wireguard) with endpoint rotation
+- ✅ Filter Mullvad proxies by country and city or ownership (rented/owned) 
 - ✅ Updatable server list on container start (optional)
 - ✅ Configurable users
 - ✅ User roles (Mullvad proxy, local proxy and metrics)
@@ -21,6 +23,7 @@ Route the traffic from any device or application through it and connect seamless
 - ✅ Multiple WireGuard configurations with connection check on container start
 
 ## How it works 🏗️
+
 The container uses `GostGen` to create or update the `gost.yaml` configuration for the [GOST proxy server](https://gost.run/en).
 Because a large number of proxy endpoints is generated, the resulting configuration can become very large (12k+ lines).
 Available servers are fetched from the [Mullvad Relay API](https://api.mullvad.net/www/relays/wireguard) to keep endpoints up to date.
@@ -43,12 +46,14 @@ After connecting to the proxy, you can verify the connection by visiting the
 ## Setup 🛠️
 
 ### Data volume 📁
+
 A `data` volume must be mounted to the container.
 The following configuration **files are required to run the container**:
 - [WireGuard configuration(s)](#mullvad-wireguard-config-) (`*.conf`)
 - [Gateway configuration](#gateway-config-) (`gateway.yaml`)
  
 ### Mullvad WireGuard config 🔐
+
 > [!TIP]
 > Use the **nearest available location** for the VPN connection. 
 > The VPN is only needed to access the Mullvad network in order 
@@ -77,36 +82,40 @@ Endpoint = de-fra-wg-001.mullvad.net:51820
 ```
 
 ### Gateway config 🤖
-Configuration file options for the GOST Config Generator:
-| Name                  | Default       | Description                                                  | Allowed values                                                   |
-| --------------------- | ------------- | ------------------------------------------------------------ | ---------------------------------------------------------------- |
-| LogLevel              | `Information` | Logging level of Gost Config Generator                       | `Verbose`, `Debug`, `Information`, `Warning`, `Error` or `Fatal` |
-| AlwaysGenerateServers | `false`       | If `true` updates the proxy servers on every container start | `true` / `false`                                                 |
-| GostMetricsEnabled    | `false`       | [GOST Metrics](https://gost.run/en/tutorials/metrics/)       | `true` / `false`                                                 |
 
 Example `gateway.yaml`:
 ```yaml
-LogLevel: Information
-AlwaysGenerateServers: false
-GostMetricsEnabled: false
-Users:
-  User1:
-    Password: Password1
-    HasMullvadProxyAccess: true
-    HasInternalProxyAccess: false
-    HasMetricsAccess: false
+LogLevel: Information               # Logging level (Verbose, Debug, Information, Warning, Error or Fatal)
+AlwaysGenerateServers: false        # Always update the proxy server list on container start if true
+GostMetricsEnabled: false           # Enable GOST Metrics (Prometheus endpoint on port 9100)
+Users:                              # List of users with access to the proxy and their permissions
+  User1:                            # Name of the user (can be freely chosen)
+    Password: Password1             # Password for the user (can be freely chosen)
+    HasMullvadProxyAccess: true     # Access to the Mullvad proxies
+    HasInternalProxyAccess: false   # Access to the local proxy
+    HasMetricsAccess: false         # Access to the GOST metrics
   User2:
     Password: Password2
     HasMullvadProxyAccess: true
     HasInternalProxyAccess: false
     HasMetricsAccess: false
-Bypasses:
+Bypasses:                           # Optional: List of URLs that bypass the Mullvad proxies and are routed through the local connection instead
 - 'example.com'
 - '*.example.com'
+ProxyFilter:                        # Optional: Proxy server filter
+  OwnedOnly: false                  # Optional: Only include proxies from owned locations (no rented servers)
+  Country:
+    Include: ["de", "ch", "nl"]     # Optional: Include only specific countries (country codes or names)
+    Exclude: []                     # Optional: Exclude specific countries (country codes or names)
+  City:
+    Include: []                     # Optional: Include only specific cities (city codes or names)
+    Exclude: ["dus", "ber"]         # Optional: Exclude specific cities (city codes or names)
 ```
 
 ### Docker examples 🐳
+
 #### Compose 🧩:
+
 ```yaml
 services:
   mullvad-proxy-gateway:
@@ -129,7 +138,9 @@ volumes:
   mullvad-proxy-gateway_data:
     name: mullvad-proxy-gateway_data
 ```
+
 #### CLI 💻:
+
 ```bash
 docker volume create mullvad-proxy-gateway_data && \
 docker run -d \
@@ -146,14 +157,19 @@ docker run -d \
 ```
 
 ## Exports 📤
-📄 CSV example:
+To easyly generate importable proxy lists for other applications, the container exports the available Mullvad proxies as CSV and JSON files.
+Sice the container does not know the external IP address, the export can't include the local IP with port.
+
+📄 CSV example `data/proxies.csv`:
+
 | Country  | Country Code | City   | City Code | City No. | Location Code | Port | Target                                  |
 | -------- | -----------  | ------ | --------- | -------- | ------------- | ---- | --------------------------------------- |
 | Albania  | al           | Tirana | tia       | 0        | al-tia        | 2000 | random                                  |
 | Albania  | al           | Tirana | tia       | 1        | al-tia        | 2001 | al-tia-wg-socks5-003.relays.mullvad.net |
 | Albania  | al           | Tirana | tia       | 2        | al-tia        | 2002 | al-tia-wg-socks5-004.relays.mullvad.net |
 
-🗃️ JSON example:
+🗃️ JSON example `data/proxies.json`:
+
 ```json
 [ 
   {"Country": "Albania", "CountryCode": "al", "City": "Tirana", "CityCode": "tia", "CityNo": 0, "LocationCode": "al-tia", "Port": 2000, "Target": "random"},
