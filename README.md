@@ -99,7 +99,7 @@ Users:                              # List of users with access to the proxy and
     HasMullvadProxyAccess: true
     HasInternalProxyAccess: false
     HasMetricsAccess: false
-Bypasses:                           # Optional: List of URLs that bypass the Mullvad proxies and are routed through the local connection instead
+Bypasses:                           # Optional: List of URLs that bypasses the Mullvad proxies and are routed through the local connection instead
 - 'example.com'
 - '*.example.com'
 ProxyFilter:                        # Optional: Proxy server filter
