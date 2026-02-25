@@ -147,17 +147,17 @@ docker run -d \
 
 ## Exports 📤
 📄 CSV example:
-| Country  | City   | Location Code | Port | Target                                  |
-| -------- | ------ | ------------- | ---- | --------------------------------------  |
-| Albania  | Tirana | al-tia        | 2000 | random                                  |
-| Albania  | Tirana | al-tia        | 2001 | al-tia-wg-socks5-003.relays.mullvad.net |
-| Albania  | Tirana | al-tia        | 2002 | al-tia-wg-socks5-004.relays.mullvad.net |
+| Country  | Country Code | City   | City Code | City No. | Location Code | Port | Target                                  |
+| -------- | -----------  | ------ | --------- | -------- | ------------- | ---- | --------------------------------------- |
+| Albania  | al           | Tirana | tia       | 0        | al-tia        | 2000 | random                                  |
+| Albania  | al           | Tirana | tia       | 1        | al-tia        | 2001 | al-tia-wg-socks5-003.relays.mullvad.net |
+| Albania  | al           | Tirana | tia       | 2        | al-tia        | 2002 | al-tia-wg-socks5-004.relays.mullvad.net |
 
 🗃️ JSON example:
 ```json
 [ 
-  {"Country": "Albania", "City": "Tirana", "LocationCode": "al-tia", "Port": 2000, "Target": "random"},
-  {"Country": "Albania", "City": "Tirana", "LocationCode": "al-tia", "Port": 2001, "Target": "al-tia-wg-socks5-003.relays.mullvad.net"},
-  {"Country": "Albania", "City": "Tirana", "LocationCode": "al-tia", "Port": 2002, "Target": "al-tia-wg-socks5-004.relays.mullvad.net"}
+  {"Country": "Albania", "CountryCode": "al", "City": "Tirana", "CityCode": "tia", "CityNo": 0, "LocationCode": "al-tia", "Port": 2000, "Target": "random"},
+  {"Country": "Albania", "CountryCode": "al", "City": "Tirana", "CityCode": "tia", "CityNo": 1, "LocationCode": "al-tia", "Port": 2001, "Target": "al-tia-wg-socks5-003.relays.mullvad.net"},
+  {"Country": "Albania", "CountryCode": "al", "City": "Tirana", "CityCode": "tia", "CityNo": 2, "LocationCode": "al-tia", "Port": 2002, "Target": "al-tia-wg-socks5-004.relays.mullvad.net"}
 ]
 ```
