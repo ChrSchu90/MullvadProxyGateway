@@ -5,9 +5,15 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Serilog.Events;
 using System.Threading.Tasks;
 
+/// <summary>
+/// Test for <see cref="GostLoggingSync"/>
+/// </summary>
 [TestClass]
-public class GostLoggingSyncTest
+public class GostLoggingSyncTests
 {
+    /// <summary>
+    /// Tests for <see cref="GostLoggingSync.GetGostLogLevel"/>
+    /// </summary>
     [TestMethod]
     [DataRow(LogEventLevel.Verbose, "trace", DisplayName = "Verbose")]
     [DataRow(LogEventLevel.Debug, "debug", DisplayName = "Debug")]
@@ -22,6 +28,9 @@ public class GostLoggingSyncTest
         Assert.AreEqual(expected, result, $"Failed to convert {nameof(LogEventLevel)} into GOST log level");
     }
 
+    /// <summary>
+    /// Tests for <see cref="GostLoggingSync.UpdateAsync"/>
+    /// </summary>
     [TestMethod]
     [DataRow(LogEventLevel.Verbose, GostLoggingSync.LogFormat, GostLoggingSync.LogOutput, "trace", false, DisplayName = "Match")]
     [DataRow(LogEventLevel.Information, GostLoggingSync.LogFormat, GostLoggingSync.LogOutput, "trace", true, DisplayName = "Wrong level")]

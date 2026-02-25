@@ -4,6 +4,7 @@ using GostGen.DTO;
 using Serilog;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -18,6 +19,9 @@ using System.Threading.Tasks;
 /// </summary>
 internal class GostProxySync
 {
+    internal const string RelayApiUrl = "https://api.mullvad.net/www/relays/wireguard";
+    internal const string RelayFile = "data/mullvad.json";
+    
     internal const string ExportCsvFile = "data/proxies.csv";
     internal const string ExportJsonFile = "data/proxies.json";
     
@@ -89,6 +93,7 @@ internal class GostProxySync
 
         var relays = await GetMullvadRelaysAsync().ConfigureAwait(false);
         if (relays?.Any() != true) return false;
+        relays = ApplyProxyFilter(relays, gatewayConfig);
 
         var cfgChanged = false;
         ICollection<Proxy> proxies = new List<Proxy>();
@@ -116,29 +121,28 @@ internal class GostProxySync
 
     internal static async Task<IReadOnlyCollection<MullvadRelay>?> GetMullvadRelaysAsync()
     {
-        const string MullvadFile = "data/mullvad.json";
-        if (File.Exists(MullvadFile) && new FileInfo(MullvadFile).Length > 0)
+        
+        if (File.Exists(RelayFile) && new FileInfo(RelayFile).Length > 0)
         {
             try
             {
-                Log.Verbose($"Loading Mullvad relays from file `{MullvadFile}`");
-                var relays = JsonSerializer.Deserialize<List<MullvadRelay>>(await File.ReadAllTextAsync(MullvadFile), new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-                Log.Information($"Found {relays?.Count ?? 0} Mullvad relays", relays?.Count ?? 0);
+                Log.Verbose($"Loading Mullvad relays from file `{RelayFile}`");
+                var relays = JsonSerializer.Deserialize<List<MullvadRelay>>(await File.ReadAllTextAsync(RelayFile), new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                Log.Information($"Found {relays?.Count ?? 0} Mullvad relays");
                 return relays;
             }
             catch (Exception err)
             {
-                Log.Fatal(err, $"Error on loading Mullvad relays from file `{MullvadFile}`");
+                Log.Fatal(err, $"Error on loading Mullvad relays from file `{RelayFile}`");
                 return null;
             }
         }
 
         try
         {
-            const string ApiUrl = "https://api.mullvad.net/www/relays/wireguard";
-            Log.Information($"Downloading Mullvad relays from {ApiUrl}");
+            Log.Information($"Downloading Mullvad relays from {RelayApiUrl}");
             using var httpClient = new HttpClient();
-            var json = await httpClient.GetStringAsync(ApiUrl).ConfigureAwait(false);
+            var json = await httpClient.GetStringAsync(RelayApiUrl).ConfigureAwait(false);
             var relays = JsonSerializer.Deserialize<List<MullvadRelay>>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
             Log.Verbose($"Downloaded Mullvad relays:\n{json}");
             Log.Information($"Found {relays?.Count ?? 0} Mullvad WireGuard relays", relays?.Count ?? 0);
@@ -157,7 +161,7 @@ internal class GostProxySync
         var servicePoolName = $"service-{countryCode}-{cityCode}-pool".ToLower();
         var chainPoolName = $"chain-{countryCode}-{cityCode}-pool".ToLower();
         var chainPoolHopName = $"hop-{chainPoolName}".ToLower();
-        var poolPort = FindNextFreeCityPoolAreaStart(gostConfig, servicePoolName);
+        var poolPort = FindPoolAreaPort(gostConfig, servicePoolName);
         if (poolPort < 1) return false;
         var poolServiceAddress = $":{poolPort}";
 
@@ -333,7 +337,7 @@ internal class GostProxySync
         return cfgChanged;
     }
 
-    internal static int FindNextFreeCityPoolAreaStart(GostConfig gostConfig, string servicePoolName)
+    internal static int FindPoolAreaPort(GostConfig gostConfig, string servicePoolName)
     {
         gostConfig.Services ??= [];
 
@@ -359,8 +363,10 @@ internal class GostProxySync
         return -1;
     }
 
+    [ExcludeFromCodeCoverage]
     internal static string GetDefaultInterface()
     {
+        // ToDo option to define interface inside config?
         return NetworkInterface.GetAllNetworkInterfaces()
                    .Where(i =>
                        i.OperationalStatus == OperationalStatus.Up &&
@@ -417,6 +423,50 @@ internal class GostProxySync
             Log.Fatal(err, $"Error on exporting proxy json {ExportJsonFile}");
         }
     }
+
+    internal static IReadOnlyCollection<MullvadRelay> ApplyProxyFilter(IReadOnlyCollection<MullvadRelay> relays, GatewayConfig gatewayConfig)
+    {
+        var countryInclude = new HashSet<string>(gatewayConfig.ProxyFilter.Country.Include.Where(x => !string.IsNullOrWhiteSpace(x)), StringComparer.OrdinalIgnoreCase);
+        var countryExclude = new HashSet<string>(gatewayConfig.ProxyFilter.Country.Exclude.Where(x => !string.IsNullOrWhiteSpace(x)), StringComparer.OrdinalIgnoreCase);
+        var cityInclude = new HashSet<string>(gatewayConfig.ProxyFilter.City.Include.Where(x => !string.IsNullOrWhiteSpace(x)), StringComparer.OrdinalIgnoreCase);
+        var cityExclude = new HashSet<string>(gatewayConfig.ProxyFilter.City.Exclude.Where(x => !string.IsNullOrWhiteSpace(x)), StringComparer.OrdinalIgnoreCase);
+        
+        var filterdRelays = relays.Where(r =>
+            {
+                if(string.IsNullOrWhiteSpace(r.CountryName) ||
+                   string.IsNullOrWhiteSpace(r.CountryCode) ||
+                   string.IsNullOrWhiteSpace(r.CityName) ||
+                   string.IsNullOrWhiteSpace(r.CityCode))
+                    return false;
+                
+                if (gatewayConfig.ProxyFilter.OwnedOnly && !r.Owned)
+                    return false;
+                
+                if (countryInclude.Count > 0 &&
+                    !countryInclude.Contains(r.CountryCode) &&
+                    !countryInclude.Contains(r.CountryName))
+                    return false;
+
+                if (countryExclude.Contains(r.CountryCode) ||
+                    countryExclude.Contains(r.CountryName))
+                    return false;
+
+                if (cityInclude.Count > 0 &&
+                    !cityInclude.Contains(r.CityCode) &&
+                    !cityInclude.Contains(r.CityName))
+                    return false;
+
+                if (cityExclude.Contains(r.CityCode) ||
+                    cityExclude.Contains(r.CityName))
+                    return false;
+                
+                return true;
+            }).ToArray();
+
+        Log.Information($"Filtered {relays.Count} Mullvad relays, {filterdRelays.Length} relays remaining");
+        return filterdRelays;
+    }
     
+    [ExcludeFromCodeCoverage]
     internal record Proxy(int CityIdx, MullvadRelay Server, ServiceConfig Service, ChainConfig Chain, HopConfig Hop);
 }

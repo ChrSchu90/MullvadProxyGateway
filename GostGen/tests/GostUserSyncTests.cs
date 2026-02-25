@@ -6,9 +6,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
+/// <summary>
+/// Test for <see cref="GostUserSync"/>
+/// </summary>
 
 [TestClass]
-public class GostUserSyncTest
+public class GostUserSyncTests
 {
     [TestMethod]
     public async Task NoChangesAreMade()
@@ -35,26 +38,37 @@ public class GostUserSyncTest
     [TestMethod]
     public async Task UserAdded()
     {
-        var gatewayConfig = new GatewayConfig
-        {
-            Users = new Dictionary<string, User>
-            {
-                ["User1"] = new() { Password = "Password1", HasMullvadProxyAccess = true, HasInternalProxyAccess = true, HasMetricsAccess = true }
-            }
-        };
-
-        var gostConfig = new GostConfig
-        {
-            //Authers = [new AutherConfig { Name = GostUserSync.AutherMullvadGroup, Auths = [new() { Username = "User1", Password = "Password1"}] },
-            //           new AutherConfig { Name = GostUserSync.AutherInternalGroup, Auths = [new() { Username = "User1", Password = "Password1"}] },
-            //           new AutherConfig { Name = GostUserSync.AutherMetricsGroup, Auths = [new() { Username = "User1", Password = "Password1"}] }]
-        };
-
+        var gatewayConfig = new GatewayConfig { Users = new Dictionary<string, User> { ["User1"] = new() { Password = "Password1", HasMullvadProxyAccess = true, HasInternalProxyAccess = true, HasMetricsAccess = true } } };
+        var gostConfig = new GostConfig();
         var result = await GostUserSync.UpdateAsync(gostConfig, gatewayConfig);
         Assert.IsTrue(result, "Change was not detected");
         Assert.IsTrue(gostConfig.Authers!.First(g => g.Name == GostUserSync.AutherMullvadGroup).Auths!.Any(a => a.Username == "User1"), "New user was not added inside auther group");
         Assert.IsTrue(gostConfig.Authers!.First(g => g.Name == GostUserSync.AutherInternalGroup).Auths!.Any(a => a.Username == "User1"), "New user was not added inside auther group");
         Assert.IsTrue(gostConfig.Authers!.First(g => g.Name == GostUserSync.AutherMetricsGroup).Auths!.Any(a => a.Username == "User1"), "New user was not added inside auther group");
+
+        gostConfig = new GostConfig();
+        gatewayConfig = new GatewayConfig { Users = new Dictionary<string, User> { ["User1"] = new() { Password = "Password1", HasMullvadProxyAccess = false, HasInternalProxyAccess = true, HasMetricsAccess = true } } };
+        result = await GostUserSync.UpdateAsync(gostConfig, gatewayConfig);
+        Assert.IsTrue(result, "Change was not detected");
+        Assert.IsTrue(gostConfig.Authers!.First(g => g.Name == GostUserSync.AutherMullvadGroup).Auths!.All(a => a.Username != "User1"), "New was added to role mullvad without having it configured");
+        Assert.IsTrue(gostConfig.Authers!.First(g => g.Name == GostUserSync.AutherInternalGroup).Auths!.Any(a => a.Username == "User1"), "New user was not added inside auther group");
+        Assert.IsTrue(gostConfig.Authers!.First(g => g.Name == GostUserSync.AutherMetricsGroup).Auths!.Any(a => a.Username == "User1"), "New user was not added inside auther group");
+
+        gostConfig = new GostConfig();
+        gatewayConfig = new GatewayConfig { Users = new Dictionary<string, User> { ["User1"] = new() { Password = "Password1", HasMullvadProxyAccess = true, HasInternalProxyAccess = false, HasMetricsAccess = true } } };
+        result = await GostUserSync.UpdateAsync(gostConfig, gatewayConfig);
+        Assert.IsTrue(result, "Change was not detected");
+        Assert.IsTrue(gostConfig.Authers!.First(g => g.Name == GostUserSync.AutherMullvadGroup).Auths!.Any(a => a.Username == "User1"), "New user was not added inside auther group");
+        Assert.IsTrue(gostConfig.Authers!.First(g => g.Name == GostUserSync.AutherInternalGroup).Auths!.All(a => a.Username != "User1"), "New was added to role internal without having it configured");
+        Assert.IsTrue(gostConfig.Authers!.First(g => g.Name == GostUserSync.AutherMetricsGroup).Auths!.Any(a => a.Username == "User1"), "New user was not added inside auther group");
+        
+        gostConfig = new GostConfig();
+        gatewayConfig = new GatewayConfig { Users = new Dictionary<string, User> { ["User1"] = new() { Password = "Password1", HasMullvadProxyAccess = true, HasInternalProxyAccess = true, HasMetricsAccess = false } } };
+        result = await GostUserSync.UpdateAsync(gostConfig, gatewayConfig);
+        Assert.IsTrue(result, "Change was not detected");
+        Assert.IsTrue(gostConfig.Authers!.First(g => g.Name == GostUserSync.AutherMullvadGroup).Auths!.Any(a => a.Username == "User1"), "New user was not added inside auther group");
+        Assert.IsTrue(gostConfig.Authers!.First(g => g.Name == GostUserSync.AutherInternalGroup).Auths!.Any(a => a.Username == "User1"), "New user was not added inside auther group");
+        Assert.IsTrue(gostConfig.Authers!.First(g => g.Name == GostUserSync.AutherMetricsGroup).Auths!.All(a => a.Username != "User1"), "New was added to role metrics without having it configured");
     }
 
     [TestMethod]

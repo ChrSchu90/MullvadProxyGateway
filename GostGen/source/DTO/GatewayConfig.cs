@@ -1,9 +1,10 @@
 ﻿namespace GostGen.DTO;
 
+using Serilog.Events;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
-using Serilog.Events;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
 
@@ -11,6 +12,7 @@ using YamlDotNet.Serialization.NamingConventions;
 /// Gateway configuration, which can be loaded from a yaml, json content.
 /// The configuration can be used to control the behavior of the gateway.
 /// </summary>
+[ExcludeFromCodeCoverage]
 internal record GatewayConfig
 {
     #region Static Fields
@@ -57,6 +59,11 @@ internal record GatewayConfig
     /// Gets or sets the bypasses.
     /// </summary>
     public List<string> Bypasses { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the proxy filter
+    /// </summary>
+    public ProxyFilter ProxyFilter { get; set; } = new();
 
     #endregion
 
@@ -143,6 +150,7 @@ internal record GatewayConfig
 /// <summary>
 /// User configuration, with user specific info.
 /// </summary>
+[ExcludeFromCodeCoverage]
 public record User
 {
     /// <summary>
@@ -166,3 +174,41 @@ public record User
     public bool HasMetricsAccess { get; set; }
 }
 
+/// <summary>
+/// Proxy Filter configuration.
+/// </summary>
+[ExcludeFromCodeCoverage]
+public record ProxyFilter
+{
+    /// <summary>
+    /// Gets or sets a value indicating whether only Mullvad owned servers should be used
+    /// </summary>
+    public bool OwnedOnly { get; set; }
+
+    /// <summary>
+    /// Gets or sets the proxy country filters
+    /// </summary>
+    public Filter Country { get; set; } = new();
+
+    /// <summary>
+    /// Gets or sets the proxy city filters
+    /// </summary>
+    public Filter City { get; set; } = new();
+}
+
+/// <summary>
+/// Filter configuration.
+/// </summary>
+[ExcludeFromCodeCoverage]
+public record Filter
+{
+    /// <summary>
+    /// Gets or sets include filters
+    /// </summary>
+    public List<string> Include { get; set; } = new();
+
+    /// <summary>
+    /// Gets or sets exclude filters
+    /// </summary>
+    public List<string> Exclude { get; set; } = new();
+}

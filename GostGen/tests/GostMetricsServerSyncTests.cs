@@ -4,9 +4,15 @@ using GostGen.DTO;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Threading.Tasks;
 
+/// <summary>
+/// Test for <see cref="GostMetricsServerSync"/>
+/// </summary>
 [TestClass]
-public class GostMetricsServerSyncTest
+public class GostMetricsServerSyncTests
 {
+    /// <summary>
+    /// Tests for <see cref="GostMetricsServerSync.UpdateAsync"/>
+    /// </summary>
     [TestMethod]
     [DataRow(true, null, null, null, true, DisplayName = "Enable metrics server when Metrics is null")]
     [DataRow(true, GostMetricsServerSync.MetricsPort, GostMetricsServerSync.MetricsPath, GostUserSync.AutherMetricsGroup, false, DisplayName = "No change when Metrics is already configured correctly")]

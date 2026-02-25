@@ -4,11 +4,13 @@
 namespace GostGen.DTO;
 
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 
 /// <summary>
 /// Mullvad WireGuard relay received from the API https://api.mullvad.net/www/relays/wireguard
 /// </summary>
+[ExcludeFromCodeCoverage]
 internal record MullvadRelay
 {
     [JsonPropertyName("hostname")]

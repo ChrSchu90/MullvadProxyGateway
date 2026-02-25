@@ -1,6 +1,7 @@
 namespace GostGen;
 
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.IO;
 using System.Reflection;
@@ -21,6 +22,7 @@ internal class Program
     /// Defines the entry point of the application.
     /// </summary>
     /// <param name="args">The arguments.</param>
+    [ExcludeFromCodeCoverage]
     public static async Task Main(string[] args)
     {
         try
@@ -31,7 +33,7 @@ internal class Program
             var gatewayConfig = LoadGatewayConfig()!;
             if (gatewayConfig == null!) return;
             logLevelSwitch.MinimumLevel = gatewayConfig.LogLevel;
-
+            
             var gostConfig = await GetGostConfigAsync().ConfigureAwait(false);
             if (gostConfig == null) return;
 
@@ -57,6 +59,7 @@ internal class Program
 #endif
     }
 
+    [ExcludeFromCodeCoverage]
     internal static LoggingLevelSwitch InitLogging()
     {
         // Force english exception messages

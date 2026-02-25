@@ -4,11 +4,13 @@
 namespace GostGen.DTO;
 
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using YamlDotNet.Serialization;
 
 /// <summary>
 /// GOST (https://github.com/go-gost/gost) configuration serialization structures.
 /// </summary>
+[ExcludeFromCodeCoverage]
 internal record GostConfig
 {
     /// <summary>
@@ -108,6 +110,7 @@ internal record GostConfig
     }
 }
 
+[ExcludeFromCodeCoverage]
 internal record LogConfig
 {
     [YamlMember(Alias = "level")]
@@ -123,6 +126,7 @@ internal record LogConfig
     public LogRotationConfig? Rotation { get; set; }
 }
 
+[ExcludeFromCodeCoverage]
 internal record LogRotationConfig
 {
     [YamlMember(Alias = "maxSize")]
@@ -141,6 +145,7 @@ internal record LogRotationConfig
     public bool? Compress { get; set; }
 }
 
+[ExcludeFromCodeCoverage]
 internal record LoggerConfig
 {
     [YamlMember(Alias = "name")]
@@ -150,12 +155,14 @@ internal record LoggerConfig
     public LogConfig? Log { get; set; }
 }
 
+[ExcludeFromCodeCoverage]
 internal record ProfilingConfig
 {
     [YamlMember(Alias = "addr")]
     public string? Addr { get; set; }
 }
 
+[ExcludeFromCodeCoverage]
 internal record ApiConfig
 {
     [YamlMember(Alias = "addr")]
@@ -174,6 +181,7 @@ internal record ApiConfig
     public string? Auther { get; set; }
 }
 
+[ExcludeFromCodeCoverage]
 internal record MetricsConfig
 {
     [YamlMember(Alias = "addr")]
@@ -189,6 +197,7 @@ internal record MetricsConfig
     public string? Auther { get; set; }
 }
 
+[ExcludeFromCodeCoverage]
 internal record TLSConfig
 {
     [YamlMember(Alias = "certFile")]
@@ -219,6 +228,7 @@ internal record TLSConfig
     public string? Organization { get; set; }
 }
 
+[ExcludeFromCodeCoverage]
 internal record TLSOptions
 {
     [YamlMember(Alias = "minVersion")]
@@ -234,6 +244,7 @@ internal record TLSOptions
     public List<string>? ALPN { get; set; }
 }
 
+[ExcludeFromCodeCoverage]
 internal record PluginConfig
 {
     [YamlMember(Alias = "type")]
@@ -252,6 +263,7 @@ internal record PluginConfig
     public string? Token { get; set; }
 }
 
+[ExcludeFromCodeCoverage]
 internal record AutherConfig
 {
     [YamlMember(Alias = "name")]
@@ -276,6 +288,7 @@ internal record AutherConfig
     public PluginConfig? Plugin { get; set; }
 }
 
+[ExcludeFromCodeCoverage]
 internal record AuthConfig
 {
     [YamlMember(Alias = "username")]
@@ -288,6 +301,7 @@ internal record AuthConfig
     public string? File { get; set; }
 }
 
+[ExcludeFromCodeCoverage]
 internal record SelectorConfig
 {
     [YamlMember(Alias = "strategy")]
@@ -323,6 +337,7 @@ internal enum SelectorStrategy
     hash,
 }
 
+[ExcludeFromCodeCoverage]
 internal record AdmissionConfig
 {
     [YamlMember(Alias = "name")]
@@ -353,6 +368,7 @@ internal record AdmissionConfig
     public PluginConfig? Plugin { get; set; }
 }
 
+[ExcludeFromCodeCoverage]
 internal record BypassConfig
 {
     [YamlMember(Alias = "name")]
@@ -383,12 +399,14 @@ internal record BypassConfig
     public PluginConfig? Plugin { get; set; }
 }
 
+[ExcludeFromCodeCoverage]
 internal record FileLoader
 {
     [YamlMember(Alias = "path")]
     public string? Path { get; set; }
 }
 
+[ExcludeFromCodeCoverage]
 internal record RedisLoader
 {
     [YamlMember(Alias = "addr")]
@@ -410,6 +428,7 @@ internal record RedisLoader
     public string? Type { get; set; }
 }
 
+[ExcludeFromCodeCoverage]
 internal record HTTPLoader
 {
     [YamlMember(Alias = "url")]
@@ -419,6 +438,7 @@ internal record HTTPLoader
     public string? Timeout { get; set; }
 }
 
+[ExcludeFromCodeCoverage]
 internal record NameserverConfig
 {
     [YamlMember(Alias = "addr")]
@@ -449,6 +469,7 @@ internal record NameserverConfig
     public string? Only { get; set; }
 }
 
+[ExcludeFromCodeCoverage]
 internal record ResolverConfig
 {
     [YamlMember(Alias = "name")]
@@ -461,6 +482,7 @@ internal record ResolverConfig
     public PluginConfig? Plugin { get; set; }
 }
 
+[ExcludeFromCodeCoverage]
 internal record HostMappingConfig
 {
     [YamlMember(Alias = "ip")]
@@ -473,6 +495,7 @@ internal record HostMappingConfig
     public List<string>? Aliases { get; set; }
 }
 
+[ExcludeFromCodeCoverage]
 internal record HostsConfig
 {
     [YamlMember(Alias = "name")]
@@ -497,6 +520,7 @@ internal record HostsConfig
     public PluginConfig? Plugin { get; set; }
 }
 
+[ExcludeFromCodeCoverage]
 internal record IngressRuleConfig
 {
     [YamlMember(Alias = "hostname")]
@@ -506,6 +530,7 @@ internal record IngressRuleConfig
     public string? Endpoint { get; set; }
 }
 
+[ExcludeFromCodeCoverage]
 internal record IngressConfig
 {
     [YamlMember(Alias = "name")]
@@ -530,6 +555,7 @@ internal record IngressConfig
     public PluginConfig? Plugin { get; set; }
 }
 
+[ExcludeFromCodeCoverage]
 internal record SDConfig
 {
     [YamlMember(Alias = "name")]
@@ -539,6 +565,7 @@ internal record SDConfig
     public PluginConfig? Plugin { get; set; }
 }
 
+[ExcludeFromCodeCoverage]
 internal record RouterRouteConfig
 {
     [YamlMember(Alias = "net")]
@@ -551,6 +578,7 @@ internal record RouterRouteConfig
     public string? Gateway { get; set; }
 }
 
+[ExcludeFromCodeCoverage]
 internal record RouterConfig
 {
     [YamlMember(Alias = "name")]
@@ -575,6 +603,7 @@ internal record RouterConfig
     public PluginConfig? Plugin { get; set; }
 }
 
+[ExcludeFromCodeCoverage]
 internal record RecorderConfig
 {
     [YamlMember(Alias = "name")]
@@ -596,6 +625,7 @@ internal record RecorderConfig
     public PluginConfig? Plugin { get; set; }
 }
 
+[ExcludeFromCodeCoverage]
 internal record FileRecorder
 {
     [YamlMember(Alias = "path")]
@@ -608,6 +638,7 @@ internal record FileRecorder
     public LogRotationConfig? Rotation { get; set; }
 }
 
+[ExcludeFromCodeCoverage]
 internal record TCPRecorder
 {
     [YamlMember(Alias = "addr")]
@@ -617,6 +648,7 @@ internal record TCPRecorder
     public string? Timeout { get; set; }
 }
 
+[ExcludeFromCodeCoverage]
 internal record HTTPRecorder
 {
     [YamlMember(Alias = "url")]
@@ -629,6 +661,7 @@ internal record HTTPRecorder
     public Dictionary<string, string>? Header { get; set; }
 }
 
+[ExcludeFromCodeCoverage]
 internal record RedisRecorder
 {
     [YamlMember(Alias = "addr")]
@@ -650,6 +683,7 @@ internal record RedisRecorder
     public string? Type { get; set; }
 }
 
+[ExcludeFromCodeCoverage]
 internal record RecorderObject
 {
     [YamlMember(Alias = "name")]
@@ -662,6 +696,7 @@ internal record RecorderObject
     public Dictionary<string, object?>? Metadata { get; set; }
 }
 
+[ExcludeFromCodeCoverage]
 internal record LimiterConfig
 {
     [YamlMember(Alias = "name")]
@@ -686,6 +721,7 @@ internal record LimiterConfig
     public PluginConfig? Plugin { get; set; }
 }
 
+[ExcludeFromCodeCoverage]
 internal record ObserverConfig
 {
     [YamlMember(Alias = "name")]
@@ -695,6 +731,7 @@ internal record ObserverConfig
     public PluginConfig? Plugin { get; set; }
 }
 
+[ExcludeFromCodeCoverage]
 internal record ListenerConfig
 {
     [YamlMember(Alias = "type")]
@@ -722,6 +759,7 @@ internal record ListenerConfig
     public Dictionary<string, object?>? Metadata { get; set; }
 }
 
+[ExcludeFromCodeCoverage]
 internal record HandlerConfig
 {
     [YamlMember(Alias = "type")]
@@ -758,6 +796,7 @@ internal record HandlerConfig
     public Dictionary<string, object?>? Metadata { get; set; }
 }
 
+[ExcludeFromCodeCoverage]
 internal record ForwarderConfig
 {
     [YamlMember(Alias = "name")]
@@ -773,6 +812,7 @@ internal record ForwarderConfig
     public List<ForwardNodeConfig>? Nodes { get; set; }
 }
 
+[ExcludeFromCodeCoverage]
 internal record ForwardNodeConfig
 {
     [YamlMember(Alias = "name")]
@@ -818,6 +858,7 @@ internal record ForwardNodeConfig
     public Dictionary<string, object?>? Metadata { get; set; }
 }
 
+[ExcludeFromCodeCoverage]
 internal record NodeFilterConfig
 {
     [YamlMember(Alias = "host")]
@@ -830,6 +871,7 @@ internal record NodeFilterConfig
     public string? Path { get; set; }
 }
 
+[ExcludeFromCodeCoverage]
 internal record NodeMatcherConfig
 {
     [YamlMember(Alias = "rule")]
@@ -839,6 +881,7 @@ internal record NodeMatcherConfig
     public int? Priority { get; set; }
 }
 
+[ExcludeFromCodeCoverage]
 internal record HTTPNodeConfig
 {
     [YamlMember(Alias = "host")]
@@ -857,6 +900,7 @@ internal record HTTPNodeConfig
     public AuthConfig? Auth { get; set; }
 }
 
+[ExcludeFromCodeCoverage]
 internal record TLSNodeConfig
 {
     [YamlMember(Alias = "serverName")]
@@ -869,6 +913,7 @@ internal record TLSNodeConfig
     public TLSOptions? Options { get; set; }
 }
 
+[ExcludeFromCodeCoverage]
 internal record DialerConfig
 {
     [YamlMember(Alias = "type")]
@@ -884,6 +929,7 @@ internal record DialerConfig
     public Dictionary<string, object?>? Metadata { get; set; }
 }
 
+[ExcludeFromCodeCoverage]
 internal record ConnectorConfig
 {
     [YamlMember(Alias = "type")]
@@ -899,12 +945,14 @@ internal record ConnectorConfig
     public Dictionary<string, object?>? Metadata { get; set; }
 }
 
+[ExcludeFromCodeCoverage]
 internal record SockOptsConfig
 {
     [YamlMember(Alias = "mark")]
     public int? Mark { get; set; }
 }
 
+[ExcludeFromCodeCoverage]
 internal record ServiceConfig
 {
     [YamlMember(Alias = "name")]
@@ -974,6 +1022,7 @@ internal record ServiceConfig
     public ServiceStatus? Status { get; set; }
 }
 
+[ExcludeFromCodeCoverage]
 internal record ServiceStatus
 {
     [YamlMember(Alias = "createTime")]
@@ -989,6 +1038,7 @@ internal record ServiceStatus
     public ServiceStats? Stats { get; set; }
 }
 
+[ExcludeFromCodeCoverage]
 internal record ServiceEvent
 {
     [YamlMember(Alias = "time")]
@@ -998,6 +1048,7 @@ internal record ServiceEvent
     public string? Msg { get; set; }
 }
 
+[ExcludeFromCodeCoverage]
 internal record ServiceStats
 {
     [YamlMember(Alias = "totalConns")]
@@ -1016,6 +1067,7 @@ internal record ServiceStats
     public ulong? OutputBytes { get; set; }
 }
 
+[ExcludeFromCodeCoverage]
 internal record ChainConfig
 {
     [YamlMember(Alias = "name")]
@@ -1028,6 +1080,7 @@ internal record ChainConfig
     public Dictionary<string, object?>? Metadata { get; set; }
 }
 
+[ExcludeFromCodeCoverage]
 internal record ChainGroupConfig
 {
     [YamlMember(Alias = "chains")]
@@ -1037,6 +1090,7 @@ internal record ChainGroupConfig
     public SelectorConfig? Selector { get; set; }
 }
 
+[ExcludeFromCodeCoverage]
 internal record HopConfig
 {
     [YamlMember(Alias = "name")]
@@ -1085,6 +1139,7 @@ internal record HopConfig
     public Dictionary<string, object?>? Metadata { get; set; }
 }
 
+[ExcludeFromCodeCoverage]
 internal record NodeConfig
 {
     [YamlMember(Alias = "name")]
