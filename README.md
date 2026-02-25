@@ -87,7 +87,7 @@ Example `gateway.yaml`:
 ```yaml
 LogLevel: Information               # Logging level (Verbose, Debug, Information, Warning, Error or Fatal)
 AlwaysGenerateServers: false        # Always update the proxy server list on container start if true
-GostMetricsEnabled: false           # Enable GOST Metrics (Prometheus endpoint on port 9100)
+GostMetricsEnabled: false           # Enable GOST Metrics (Prometheus endpoint) curl -v -u user:password http://ip:9100/metrics
 Users:                              # List of users with access to the proxy and their permissions
   User1:                            # Name of the user (can be freely chosen)
     Password: Password1             # Password for the user (can be freely chosen)
