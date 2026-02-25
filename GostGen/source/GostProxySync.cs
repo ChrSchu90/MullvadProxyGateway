@@ -1,4 +1,4 @@
-﻿namespace GostGen;
+namespace GostGen;
 
 using GostGen.DTO;
 using Serilog;
@@ -121,7 +121,7 @@ internal class GostProxySync
         {
             try
             {
-                Log.Verbose($"Lodaing Mullvad relays from file `{MullvadFile}`");
+                Log.Verbose($"Loading Mullvad relays from file `{MullvadFile}`");
                 var relays = JsonSerializer.Deserialize<List<MullvadRelay>>(await File.ReadAllTextAsync(MullvadFile), new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
                 Log.Information($"Found {relays?.Count ?? 0} Mullvad relays", relays?.Count ?? 0);
                 return relays;
@@ -171,8 +171,6 @@ internal class GostProxySync
             cfgChanged = true;
         }
 
-        proxies.Add(new Proxy(true, servers.First(), poolService));
-
         if (poolService.Addr != poolServiceAddress ||
             !string.Equals(poolService.Interface, networkInterface) ||
             !string.Equals(poolService.Listener?.Type, NetworkProtocol) ||
@@ -209,6 +207,8 @@ internal class GostProxySync
         }
 
         poolHop.Nodes ??= [];
+        if(poolHop.Nodes.Count > servers.Length) poolHop.Nodes.Clear();
+        
         poolHop.Selector ??= new();
         if (poolHop.Selector.Strategy != PoolSelectorStrategy ||
             poolHop.Selector.MaxFails != PoolSelectorMaxFails ||
@@ -220,9 +220,10 @@ internal class GostProxySync
             poolHop.Selector.FailTimeout = PoolSelectorFailTimeout;
             cfgChanged = true;
         }
-
-        var serverCnt = Math.Min(servers.Count(), ProxiesServersPerCity);
-        for (var i = 1; i <= serverCnt; i++)
+        
+        // Proxy list for export
+        proxies.Add(new Proxy(0, servers.First(), poolService, poolChain, poolHop));
+        for (var i = 1; i <= servers.Length; i++)
         {
             var serviceCityName = $"service-{countryCode}-{cityCode}-{i}".ToLower();
             var chainCityName = $"chain-{countryCode}-{cityCode}-{i}".ToLower();
@@ -230,7 +231,35 @@ internal class GostProxySync
             var chainCityHopNodeName = $"node-{chainCityHopName}";
             var cityAddress = $":{poolPort + i}";
             var cityServer = servers.ElementAt(i - 1);
+            var svrAddress = $"{cityServer.SocksName}:{cityServer.SocksPort}";
 
+            // Add to pool
+            var poolNode = poolHop.Nodes.ElementAtOrDefault(i - 1);
+            var poolNodeName = $"{chainCityHopNodeName}-pool";
+            if (!string.Equals(poolNode?.Name, poolNodeName))
+            {
+                Log.Debug($"Updating pool node `{poolNodeName}`");
+                poolNode = new NodeConfig { Name = poolNodeName };
+                poolHop.Nodes.Insert(i - 1, poolNode);
+                cfgChanged = true;
+            }
+            
+            if (!string.Equals(poolNode!.Bypass, GostBypassSync.BypassMullvadGroup) ||
+                !string.Equals(poolNode.Addr, svrAddress) ||
+                !string.Equals(poolNode.Connector?.Type, SocksType) ||
+                !string.Equals(poolNode.Dialer?.Type, NetworkProtocol))
+            {
+                Log.Debug($"Updating pool city node `{chainCityHopNodeName}`");
+                poolNode.Bypass = GostBypassSync.BypassMullvadGroup;
+                poolNode.Addr = svrAddress;
+                poolNode.Connector = new() { Type = SocksType };
+                poolNode.Dialer = new() { Type = NetworkProtocol };
+                cfgChanged = true;
+            }
+            
+            if (i > ProxiesServersPerCity) 
+                continue;
+            
             var cityService = gostConfig.Services.FirstOrDefault(s => string.Equals(s.Name, serviceCityName, StringComparison.OrdinalIgnoreCase));
             if (cityService == null)
             {
@@ -239,8 +268,6 @@ internal class GostProxySync
                 gostConfig.Services.Add(cityService);
                 cfgChanged = true;
             }
-
-            proxies.Add(new Proxy(false, cityServer, cityService));
 
             if (cityService.Addr != cityAddress ||
                 !string.Equals(cityService.Interface, networkInterface) ||
@@ -286,7 +313,9 @@ internal class GostProxySync
                 cfgChanged = true;
             }
 
-            var svrAddress = $"{cityServer.SocksName}:{cityServer.SocksPort}";
+            // Proxy list for export
+            proxies.Add(new Proxy(i, cityServer, cityService, chain, hop));
+            
             if (!string.Equals(node.Bypass, GostBypassSync.BypassMullvadGroup) ||
                 !string.Equals(node.Addr, svrAddress) ||
                 !string.Equals(node.Connector?.Type, SocksType) ||
@@ -297,14 +326,6 @@ internal class GostProxySync
                 node.Addr = svrAddress;
                 node.Connector = new() { Type = SocksType };
                 node.Dialer = new() { Type = NetworkProtocol };
-                cfgChanged = true;
-            }
-
-            var poolNode = node with { Name = $"{chainCityHopNodeName}-pool" };
-            if (poolHop.Nodes.ElementAtOrDefault(i - 1) != poolNode)
-            {
-                Log.Debug($"Updating pool node `{poolNode.Name}`");
-                poolHop.Nodes.Insert(i - 1, poolNode);
                 cfgChanged = true;
             }
         }
@@ -354,12 +375,15 @@ internal class GostProxySync
         try
         {
             Log.Information($"Exporting proxy list to `{ExportCsvFile}`");
-            var csvString = "Country,City,Location Code,Port,Target\n" + string.Join("\n",
+            var csvString = "Country,Country Code,City,City Code,City No.,Location Code,Port,Target\n" + string.Join("\n",
                                 proxies.Select(p => $"\"{p.Server.CountryName}\"," +
+                                                    $"{p.Server.CountryCode}," +
                                                     $"\"{p.Server.CityName}\"," +
+                                                    $"{p.Server.CityCode}," +
+                                                    $"{p.CityIdx}," +
                                                     $"{p.Server.CountryCode}-{p.Server.CityCode}," +
                                                     $"{AddressPortRegex.Match(p.Service.Addr!).Groups["port"]}," +
-                                                    $"{(p.IsPool ? "random" : p.Server.SocksName)}")) + "\n";
+                                                    $"{(p.CityIdx == 0 ? "random" : p.Server.SocksName)}")) + "\n";
 
             File.WriteAllText(ExportCsvFile, csvString);
         }
@@ -377,10 +401,13 @@ internal class GostProxySync
             var export = proxies.Select(p => new
             {
                 Country = p.Server.CountryName,
+                CountryCode = p.Server.CountryCode,
                 City = p.Server.CityName,
+                CityCode = p.Server.CityCode,
+                CityNo = p.CityIdx,
                 LocationCode = $"{p.Server.CountryCode}-{p.Server.CityCode}",
                 Port = int.Parse(AddressPortRegex.Match(p.Service.Addr!).Groups["port"].Value),
-                Target = p.IsPool ? "random" : p.Server.SocksName
+                Target = p.CityIdx == 0 ? "random" : p.Server.SocksName
             });
 
             File.WriteAllText(ExportJsonFile, JsonSerializer.Serialize(export, new JsonSerializerOptions { WriteIndented = true }));
@@ -391,5 +418,5 @@ internal class GostProxySync
         }
     }
     
-    internal record Proxy(bool IsPool, MullvadRelay Server, ServiceConfig Service);
+    internal record Proxy(int CityIdx, MullvadRelay Server, ServiceConfig Service, ChainConfig Chain, HopConfig Hop);
 }
