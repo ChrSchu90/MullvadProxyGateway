@@ -114,53 +114,59 @@ public class GostProxySyncTests
     [TestMethod]
     public void FindPoolAreaPort()
     {
-        // New pool
-        var config = new GostConfig();
-        var port = GostProxySync.FindPoolAreaPort(config, "test-pool-1");
-        var expectedPort = GostProxySync.ProxyPortCitiesStart;
-        Assert.AreEqual(expectedPort, port, "Empty config should result in area start port");
-
-        // Add pool
-        config = new GostConfig { Services = [new ServiceConfig { Name = "test-pool", Addr = $":{GostProxySync.ProxyPortCitiesStart}" }] };
-        port = GostProxySync.FindPoolAreaPort(config, "test-pool-1");
-        expectedPort = GostProxySync.ProxyPortCitiesStart + GostProxySync.ProxyPortsPerCity;
-        Assert.AreEqual(expectedPort, port, "New pool has not been created after existing pool");
-
-        // Reuse same pool
-        config = new GostConfig
+        for (byte maxServerPerCity = 1; maxServerPerCity <= 50; maxServerPerCity++)
         {
-            Services = [
-                           new ServiceConfig { Name = "test-pool-1", Addr = $":{GostProxySync.ProxyPortCitiesStart}"},
-                           new ServiceConfig { Name = "test-pool-2", Addr = $":{GostProxySync.ProxyPortCitiesStart + 100}"}
-                       ]
-        };
-        port = GostProxySync.FindPoolAreaPort(config, "test-pool-1");
-        expectedPort = GostProxySync.ProxyPortCitiesStart;
-        Assert.AreEqual(expectedPort, port, "Same pool does not return previous port");
+            // New pool
+            var gostConfig = new GostConfig();
+            var gatewayConfig = new GatewayConfig { MaxServersPerCity = maxServerPerCity };
 
-        // Add pool at end with gap
-        config = new GostConfig
-        {
-            Services = [
-                                 new ServiceConfig { Name = "test-pool-1", Addr = $":{GostProxySync.ProxyPortCitiesStart}"},
-                                 new ServiceConfig { Name = "test-pool-2", Addr = $":{GostProxySync.ProxyPortCitiesStart + 100}"}
-                             ]
-        };
-        port = GostProxySync.FindPoolAreaPort(config, "test-pool-3");
-        expectedPort = GostProxySync.ProxyPortCitiesStart + 100 + GostProxySync.ProxyPortsPerCity;
-        Assert.AreEqual(expectedPort, port, "Pool was not added at the very end");
+            var port = GostProxySync.FindPoolAreaPort(gostConfig, gatewayConfig, "al", "tia");
+            var expectedPort = GostProxySync.ProxyPortStart;
+            Assert.AreEqual(expectedPort, port, "Empty config should result in area start port");
 
-        // Out of area
-        config = new GostConfig
-        {
-            Services = [
-                                 new ServiceConfig { Name = "test-pool-1", Addr = $":{GostProxySync.ProxyPortCitiesStart}"},
-                                 new ServiceConfig { Name = "test-pool-2", Addr = $":{GostProxySync.ProxyPortCitiesEnd - GostProxySync.ProxyPortsPerCity}"}
-                             ]
-        };
-        port = GostProxySync.FindPoolAreaPort(config, "test-pool-3");
-        expectedPort = -1;
-        Assert.AreEqual(expectedPort, port, "Pool was added outside of area");
+            // Add pool
+            gostConfig = new GostConfig { Services = [new ServiceConfig { Name = "service-al-tia-1", Addr = $":{GostProxySync.ProxyPortStart}" }] };
+            port = GostProxySync.FindPoolAreaPort(gostConfig, gatewayConfig, "ar", "bue");
+            expectedPort = GostProxySync.ProxyPortStart + maxServerPerCity;
+            Assert.AreEqual(expectedPort, port, "New pool has not been created after existing pool");
+
+            // Reuse same pool
+            gostConfig = new GostConfig
+            {
+                Services = [
+                               new ServiceConfig { Name = "service-al-tia-1", Addr = $":{GostProxySync.ProxyPortStart}"},
+                               new ServiceConfig { Name = "service-ar-bue-1", Addr = $":{GostProxySync.ProxyPortStart + 2 * maxServerPerCity}"}
+                           ]
+            };
+            port = GostProxySync.FindPoolAreaPort(gostConfig, gatewayConfig, "al", "tia");
+            expectedPort = GostProxySync.ProxyPortStart;
+            Assert.AreEqual(expectedPort, port, "Same pool does not return previous port");
+
+
+            // Add pool at end with gap
+            gostConfig = new GostConfig
+            {
+                Services = [
+                               new ServiceConfig { Name = "service-al-tia-1", Addr = $":{GostProxySync.ProxyPortStart}"},
+                               new ServiceConfig { Name = "service-ar-bue-1", Addr = $":{GostProxySync.ProxyPortStart + 4 * maxServerPerCity}"}
+                           ]
+            };
+            port = GostProxySync.FindPoolAreaPort(gostConfig, gatewayConfig, "au", "adl");
+            expectedPort = GostProxySync.ProxyPortStart + 4 * maxServerPerCity + maxServerPerCity;
+            Assert.AreEqual(expectedPort, port, "Pool was not added at the very end");
+
+            // Out of area
+            gostConfig = new GostConfig
+            {
+                Services = [
+                               new ServiceConfig { Name = "service-al-tia-1", Addr = $":{GostProxySync.ProxyPortStart}"},
+                               new ServiceConfig { Name = "service-ar-bue-1", Addr = $":{GostProxySync.ProxyPortEnd - maxServerPerCity}"}
+                           ]
+            };
+            port = GostProxySync.FindPoolAreaPort(gostConfig, gatewayConfig, "au", "adl");
+            expectedPort = -1;
+            Assert.AreEqual(expectedPort, port, "Pool was added outside of area");
+        }
     }
 
     /// <summary>
@@ -283,12 +289,219 @@ public class GostProxySyncTests
     }
 
     /// <summary>
-    /// Tests for <see cref="GostProxySync.UpdateMullvadServersAsync"/>
+    /// Tests for content changes of <see cref="GostProxySync.UpdateMullvadServersAsync"/>
     /// </summary>
     [TestMethod]
-    public async Task UpdateMullvadServersAsync()
+    public async Task UpdateMullvadServersAsyncContent()
     {
-        var gatewayCfg = new GatewayConfig { AlwaysGenerateServers = false };
+        if (File.Exists(GostProxySync.RelayFile)) File.Delete(GostProxySync.RelayFile);
+        var relayJson = (await GetMullvadRelaysAsync().ConfigureAwait(false))?.ToList();
+        Assert.IsNotNull(relayJson, "Failed to load test json from resources");
+        await File.WriteAllTextAsync(GostProxySync.RelayFile, JsonSerializer.Serialize(relayJson)).ConfigureAwait(false);
+        Assert.IsTrue(new FileInfo(GostProxySync.RelayFile).Length > 100, "Failed to save test filled relay json as file");
+
+        var gatewayPoolCfg = new GatewayConfig { UpdateServersOnStartup = true, CityRandomPools = true, MaxServersPerCity = 10 };
+        var gatewayWithoutPoolCfg = new GatewayConfig { UpdateServersOnStartup = true, CityRandomPools = false, MaxServersPerCity = 10 };
+        var gostCfg = new GostConfig();
+        var changed = await GostProxySync.UpdateMullvadServersAsync(gostCfg, gatewayPoolCfg, "eth0").ConfigureAwait(false);
+        Assert.IsTrue(changed, "Proxies must be changed if GOST config was empty");
+        var contentWithPool = GostConfig.ToYaml(gostCfg);
+        changed = await GostProxySync.UpdateMullvadServersAsync(gostCfg, gatewayWithoutPoolCfg, "eth0").ConfigureAwait(false);
+        Assert.IsTrue(changed, "Proxies must be changed if GOST config with pool rebuild without pool");
+        changed = await GostProxySync.UpdateMullvadServersAsync(gostCfg, gatewayPoolCfg, "eth0").ConfigureAwait(false);
+        Assert.IsTrue(changed, "Proxies must be changed if GOST config without pool rebuild with pool");
+        var contentWithPool2 = GostConfig.ToYaml(gostCfg);
+        Assert.AreEqual(contentWithPool, contentWithPool2, "Content does not match when changing from with pool to without pool");
+
+        gostCfg = new GostConfig();
+        changed = await GostProxySync.UpdateMullvadServersAsync(gostCfg, gatewayWithoutPoolCfg, "eth0").ConfigureAwait(false);
+        Assert.IsTrue(changed, "Proxies must be changed if GOST config was empty");
+        var contentWithoutPool = GostConfig.ToYaml(gostCfg);
+        changed = await GostProxySync.UpdateMullvadServersAsync(gostCfg, gatewayPoolCfg, "eth0").ConfigureAwait(false);
+        Assert.IsTrue(changed, "Proxies must be changed if GOST config without pool rebuild with pool");
+        changed = await GostProxySync.UpdateMullvadServersAsync(gostCfg, gatewayWithoutPoolCfg, "eth0").ConfigureAwait(false);
+        Assert.IsTrue(changed, "Proxies must be changed if GOST config with pool rebuild without pool");
+        var contentWithoutPool2 = GostConfig.ToYaml(gostCfg);
+        Assert.AreEqual(contentWithoutPool, contentWithoutPool2, "Content does not match when changing from without pool to with pool");
+
+        var gatewayCfg = new GatewayConfig { UpdateServersOnStartup = false, CityRandomPools = true, MaxServersPerCity = 10 };
+        gostCfg = new GostConfig();
+        changed = await GostProxySync.UpdateMullvadServersAsync(gostCfg, gatewayCfg, "eth0").ConfigureAwait(false);
+        Assert.IsTrue(changed, "Proxies must be changed if GOST config was empty");
+        var content1 = GostConfig.ToYaml(gostCfg);
+        gatewayCfg.UpdateServersOnStartup = true;
+        changed = await GostProxySync.UpdateMullvadServersAsync(gostCfg, gatewayCfg, "eth0").ConfigureAwait(false);
+        Assert.IsFalse(changed, "Proxies should not been changed since relays did not changed");
+        var content2 = GostConfig.ToYaml(gostCfg);
+        Assert.AreEqual(content1, content2, "Proxies should not been changed since relays did not changed");
+
+        var testRelays = new List<MullvadRelay>
+                             {
+                                 new() { CountryName  = "CountryA", CountryCode = "coa", CityName = "CityA", CityCode = "cia", Hostname = "coa-cia-1", SocksName ="socks-coa-cia-1", SocksPort = 123},
+                                 new() { CountryName  = "CountryA", CountryCode = "coa", CityName = "CityA", CityCode = "cia", Hostname = "coa-cia-2", SocksName ="socks-coa-cia-2", SocksPort = 123},
+                                 new() { CountryName  = "CountryB", CountryCode = "cob", CityName = "CityB", CityCode = "cib", Hostname = "cob-cib-1", SocksName ="socks-cob-cib-1", SocksPort = 123},
+                                 new() { CountryName  = "CountryB", CountryCode = "cob", CityName = "CityB", CityCode = "cib", Hostname = "cob-cib-2", SocksName ="socks-cob-cib-2", SocksPort = 123},
+                                 new() { CountryName  = "CountryB", CountryCode = "cob", CityName = "CityB", CityCode = "cib", Hostname = "cob-cib-3", SocksName ="socks-cob-cib-3", SocksPort = 123}
+                             };
+        await File.WriteAllTextAsync(GostProxySync.RelayFile, JsonSerializer.Serialize(testRelays)).ConfigureAwait(false);
+        Assert.IsTrue(new FileInfo(GostProxySync.RelayFile).Length > 100, "Failed to save test filled relay json as file");
+
+        gatewayCfg = new GatewayConfig { UpdateServersOnStartup = true, CityRandomPools = true, MaxServersPerCity = 10 };
+        gostCfg = new GostConfig();
+        changed = await GostProxySync.UpdateMullvadServersAsync(gostCfg, gatewayCfg, "eth0").ConfigureAwait(false);
+        Assert.IsTrue(changed, "Proxies must be changed if GOST config was empty");
+        Assert.IsNotNull(gostCfg.Services);
+        Assert.IsNotNull(gostCfg.Chains);
+        Assert.AreEqual(7, gostCfg.Services.Count, "Unexpected amount of services");
+        Assert.AreEqual(7, gostCfg.Chains.Count, "Unexpected amount of chains");
+        Assert.AreEqual(gostCfg.Services.Count, gostCfg.Chains.Count, "Amount of chains and services must be the same");
+
+        Assert.AreEqual("service-coa-cia-pool", gostCfg.Services[0].Name);
+        Assert.AreEqual("eth0", gostCfg.Services[0].Interface);
+        Assert.AreEqual(":2000", gostCfg.Services[0].Addr);
+        Assert.AreEqual(GostProxySync.NetworkProtocol, gostCfg.Services[0].Listener?.Type);
+        Assert.AreEqual(GostProxySync.SocksType, gostCfg.Services[0].Handler?.Type);
+        Assert.AreEqual(GostUserSync.AutherMullvadGroup, gostCfg.Services[0].Handler?.Auther);
+        Assert.AreEqual("chain-coa-cia-pool", gostCfg.Services[0].Handler?.Chain);
+        Assert.AreEqual("service-coa-cia-1", gostCfg.Services[1].Name);
+        Assert.AreEqual("eth0", gostCfg.Services[1].Interface);
+        Assert.AreEqual(":2001", gostCfg.Services[1].Addr);
+        Assert.AreEqual(GostProxySync.NetworkProtocol, gostCfg.Services[1].Listener?.Type);
+        Assert.AreEqual(GostProxySync.SocksType, gostCfg.Services[1].Handler?.Type);
+        Assert.AreEqual(GostUserSync.AutherMullvadGroup, gostCfg.Services[1].Handler?.Auther);
+        Assert.AreEqual("chain-coa-cia-1", gostCfg.Services[1].Handler?.Chain);
+        Assert.AreEqual("service-coa-cia-2", gostCfg.Services[2].Name);
+        Assert.AreEqual("eth0", gostCfg.Services[2].Interface);
+        Assert.AreEqual(":2002", gostCfg.Services[2].Addr);
+        Assert.AreEqual(GostProxySync.NetworkProtocol, gostCfg.Services[2].Listener?.Type);
+        Assert.AreEqual(GostProxySync.SocksType, gostCfg.Services[2].Handler?.Type);
+        Assert.AreEqual(GostUserSync.AutherMullvadGroup, gostCfg.Services[2].Handler?.Auther);
+        Assert.AreEqual("chain-coa-cia-2", gostCfg.Services[2].Handler?.Chain);
+        Assert.AreEqual("service-cob-cib-pool", gostCfg.Services[3].Name);
+        Assert.AreEqual("eth0", gostCfg.Services[3].Interface);
+        Assert.AreEqual(":2010", gostCfg.Services[3].Addr);
+        Assert.AreEqual(GostProxySync.NetworkProtocol, gostCfg.Services[3].Listener?.Type);
+        Assert.AreEqual(GostProxySync.SocksType, gostCfg.Services[3].Handler?.Type);
+        Assert.AreEqual(GostUserSync.AutherMullvadGroup, gostCfg.Services[3].Handler?.Auther);
+        Assert.AreEqual("chain-cob-cib-pool", gostCfg.Services[3].Handler?.Chain);
+        Assert.AreEqual("service-cob-cib-1", gostCfg.Services[4].Name);
+        Assert.AreEqual("eth0", gostCfg.Services[4].Interface);
+        Assert.AreEqual(":2011", gostCfg.Services[4].Addr);
+        Assert.AreEqual(GostProxySync.NetworkProtocol, gostCfg.Services[4].Listener?.Type);
+        Assert.AreEqual(GostProxySync.SocksType, gostCfg.Services[4].Handler?.Type);
+        Assert.AreEqual(GostUserSync.AutherMullvadGroup, gostCfg.Services[4].Handler?.Auther);
+        Assert.AreEqual("chain-cob-cib-1", gostCfg.Services[4].Handler?.Chain);
+        Assert.AreEqual("service-cob-cib-2", gostCfg.Services[5].Name);
+        Assert.AreEqual("eth0", gostCfg.Services[5].Interface);
+        Assert.AreEqual(":2012", gostCfg.Services[5].Addr);
+        Assert.AreEqual(GostProxySync.NetworkProtocol, gostCfg.Services[5].Listener?.Type);
+        Assert.AreEqual(GostProxySync.SocksType, gostCfg.Services[5].Handler?.Type);
+        Assert.AreEqual(GostUserSync.AutherMullvadGroup, gostCfg.Services[5].Handler?.Auther);
+        Assert.AreEqual("chain-cob-cib-2", gostCfg.Services[5].Handler?.Chain);
+        Assert.AreEqual("service-cob-cib-3", gostCfg.Services[6].Name);
+        Assert.AreEqual("eth0", gostCfg.Services[6].Interface);
+        Assert.AreEqual(":2013", gostCfg.Services[6].Addr);
+        Assert.AreEqual(GostProxySync.NetworkProtocol, gostCfg.Services[6].Listener?.Type);
+        Assert.AreEqual(GostProxySync.SocksType, gostCfg.Services[6].Handler?.Type);
+        Assert.AreEqual(GostUserSync.AutherMullvadGroup, gostCfg.Services[6].Handler?.Auther);
+        Assert.AreEqual("chain-cob-cib-3", gostCfg.Services[6].Handler?.Chain);
+
+        Assert.AreEqual("chain-coa-cia-1", gostCfg.Chains[0].Name);
+        Assert.AreEqual(1, gostCfg.Chains[0].Hops?.Count);
+        Assert.IsNull(gostCfg.Chains[0].Hops?[0].Selector);
+        Assert.AreEqual(1, gostCfg.Chains[0].Hops?[0].Nodes?.Count);
+        Assert.AreEqual("hop-chain-coa-cia-1", gostCfg.Chains[0].Hops?[0].Name);
+        Assert.AreEqual("node-hop-chain-coa-cia-1", gostCfg.Chains[0].Hops?[0].Nodes?[0].Name);
+        Assert.AreEqual(GostBypassSync.BypassMullvadGroup, gostCfg.Chains[0].Hops?[0].Nodes?[0].Bypass);
+        Assert.AreEqual("socks-coa-cia-1:123", gostCfg.Chains[0].Hops?[0].Nodes?[0].Addr);
+        Assert.AreEqual(GostProxySync.SocksType, gostCfg.Chains[0].Hops?[0].Nodes?[0].Connector?.Type);
+        Assert.AreEqual(GostProxySync.NetworkProtocol, gostCfg.Chains[0].Hops?[0].Nodes?[0].Dialer?.Type);
+        Assert.AreEqual("chain-coa-cia-2", gostCfg.Chains[1].Name);
+        Assert.AreEqual(1, gostCfg.Chains[1].Hops?.Count);
+        Assert.IsNull(gostCfg.Chains[1].Hops?[0].Selector);
+        Assert.AreEqual(1, gostCfg.Chains[1].Hops?[0].Nodes?.Count);
+        Assert.AreEqual("hop-chain-coa-cia-2", gostCfg.Chains[1].Hops?[0].Name);
+        Assert.AreEqual("node-hop-chain-coa-cia-2", gostCfg.Chains[1].Hops?[0].Nodes?[0].Name);
+        Assert.AreEqual(GostBypassSync.BypassMullvadGroup, gostCfg.Chains[1].Hops?[0].Nodes?[0].Bypass);
+        Assert.AreEqual("socks-coa-cia-2:123", gostCfg.Chains[1].Hops?[0].Nodes?[0].Addr);
+        Assert.AreEqual(GostProxySync.SocksType, gostCfg.Chains[0].Hops?[0].Nodes?[0].Connector?.Type);
+        Assert.AreEqual(GostProxySync.NetworkProtocol, gostCfg.Chains[1].Hops?[0].Nodes?[0].Dialer?.Type);
+
+        Assert.AreEqual("chain-coa-cia-pool", gostCfg.Chains[2].Name);
+        Assert.AreEqual(1, gostCfg.Chains[2].Hops?.Count);
+        Assert.IsNotNull(gostCfg.Chains[2].Hops?[0].Selector);
+        Assert.AreEqual(2, gostCfg.Chains[2].Hops?[0].Nodes?.Count);
+        Assert.AreEqual("hop-chain-coa-cia-pool", gostCfg.Chains[2].Hops?[0].Name);
+        Assert.AreEqual("node-hop-chain-coa-cia-pool-1", gostCfg.Chains[2].Hops?[0].Nodes?[0].Name);
+        Assert.AreEqual(GostBypassSync.BypassMullvadGroup, gostCfg.Chains[2].Hops?[0].Nodes?[0].Bypass);
+        Assert.AreEqual("socks-coa-cia-1:123", gostCfg.Chains[2].Hops?[0].Nodes?[0].Addr);
+        Assert.AreEqual(GostProxySync.SocksType, gostCfg.Chains[2].Hops?[0].Nodes?[0].Connector?.Type);
+        Assert.AreEqual(GostProxySync.NetworkProtocol, gostCfg.Chains[2].Hops?[0].Nodes?[0].Dialer?.Type);
+        Assert.AreEqual(GostBypassSync.BypassMullvadGroup, gostCfg.Chains[2].Hops?[0].Nodes?[1].Bypass);
+        Assert.AreEqual("socks-coa-cia-2:123", gostCfg.Chains[2].Hops?[0].Nodes?[1].Addr);
+        Assert.AreEqual(GostProxySync.SocksType, gostCfg.Chains[2].Hops?[0].Nodes?[1].Connector?.Type);
+        Assert.AreEqual(GostProxySync.NetworkProtocol, gostCfg.Chains[2].Hops?[0].Nodes?[1].Dialer?.Type);
+
+
+
+        Assert.AreEqual("chain-cob-cib-1", gostCfg.Chains[3].Name);
+        Assert.AreEqual(1, gostCfg.Chains[3].Hops?.Count);
+        Assert.IsNull(gostCfg.Chains[3].Hops?[0].Selector);
+        Assert.AreEqual(1, gostCfg.Chains[3].Hops?[0].Nodes?.Count);
+        Assert.AreEqual("hop-chain-cob-cib-1", gostCfg.Chains[3].Hops?[0].Name);
+        Assert.AreEqual("node-hop-chain-cob-cib-1", gostCfg.Chains[3].Hops?[0].Nodes?[0].Name);
+        Assert.AreEqual(GostBypassSync.BypassMullvadGroup, gostCfg.Chains[3].Hops?[0].Nodes?[0].Bypass);
+        Assert.AreEqual("socks-cob-cib-1:123", gostCfg.Chains[3].Hops?[0].Nodes?[0].Addr);
+        Assert.AreEqual(GostProxySync.SocksType, gostCfg.Chains[3].Hops?[0].Nodes?[0].Connector?.Type);
+        Assert.AreEqual(GostProxySync.NetworkProtocol, gostCfg.Chains[3].Hops?[0].Nodes?[0].Dialer?.Type);
+        Assert.AreEqual("chain-cob-cib-2", gostCfg.Chains[4].Name);
+        Assert.AreEqual(1, gostCfg.Chains[4].Hops?.Count);
+        Assert.IsNull(gostCfg.Chains[4].Hops?[0].Selector);
+        Assert.AreEqual(1, gostCfg.Chains[4].Hops?[0].Nodes?.Count);
+        Assert.AreEqual("hop-chain-cob-cib-2", gostCfg.Chains[4].Hops?[0].Name);
+        Assert.AreEqual("node-hop-chain-cob-cib-2", gostCfg.Chains[4].Hops?[0].Nodes?[0].Name);
+        Assert.AreEqual(GostBypassSync.BypassMullvadGroup, gostCfg.Chains[4].Hops?[0].Nodes?[0].Bypass);
+        Assert.AreEqual("socks-cob-cib-2:123", gostCfg.Chains[4].Hops?[0].Nodes?[0].Addr);
+        Assert.AreEqual(GostProxySync.SocksType, gostCfg.Chains[4].Hops?[0].Nodes?[0].Connector?.Type);
+        Assert.AreEqual(GostProxySync.NetworkProtocol, gostCfg.Chains[4].Hops?[0].Nodes?[0].Dialer?.Type);
+        Assert.AreEqual("chain-cob-cib-3", gostCfg.Chains[5].Name);
+        Assert.AreEqual(1, gostCfg.Chains[5].Hops?.Count);
+        Assert.IsNull(gostCfg.Chains[5].Hops?[0].Selector);
+        Assert.AreEqual(1, gostCfg.Chains[5].Hops?[0].Nodes?.Count);
+        Assert.AreEqual("hop-chain-cob-cib-3", gostCfg.Chains[5].Hops?[0].Name);
+        Assert.AreEqual("node-hop-chain-cob-cib-3", gostCfg.Chains[5].Hops?[0].Nodes?[0].Name);
+        Assert.AreEqual(GostBypassSync.BypassMullvadGroup, gostCfg.Chains[5].Hops?[0].Nodes?[0].Bypass);
+        Assert.AreEqual("socks-cob-cib-3:123", gostCfg.Chains[5].Hops?[0].Nodes?[0].Addr);
+        Assert.AreEqual(GostProxySync.SocksType, gostCfg.Chains[5].Hops?[0].Nodes?[0].Connector?.Type);
+        Assert.AreEqual(GostProxySync.NetworkProtocol, gostCfg.Chains[5].Hops?[0].Nodes?[0].Dialer?.Type);
+
+        Assert.AreEqual("chain-cob-cib-pool", gostCfg.Chains[6].Name);
+        Assert.AreEqual(1, gostCfg.Chains[6].Hops?.Count);
+        Assert.IsNotNull(gostCfg.Chains[6].Hops?[0].Selector);
+        Assert.AreEqual(3, gostCfg.Chains[6].Hops?[0].Nodes?.Count);
+        Assert.AreEqual("hop-chain-cob-cib-pool", gostCfg.Chains[6].Hops?[0].Name);
+        Assert.AreEqual("node-hop-chain-cob-cib-pool-1", gostCfg.Chains[6].Hops?[0].Nodes?[0].Name);
+        Assert.AreEqual(GostBypassSync.BypassMullvadGroup, gostCfg.Chains[6].Hops?[0].Nodes?[0].Bypass);
+        Assert.AreEqual("socks-cob-cib-1:123", gostCfg.Chains[6].Hops?[0].Nodes?[0].Addr);
+        Assert.AreEqual(GostProxySync.SocksType, gostCfg.Chains[6].Hops?[0].Nodes?[0].Connector?.Type);
+        Assert.AreEqual(GostProxySync.NetworkProtocol, gostCfg.Chains[6].Hops?[0].Nodes?[0].Dialer?.Type);
+        Assert.AreEqual(GostBypassSync.BypassMullvadGroup, gostCfg.Chains[6].Hops?[0].Nodes?[1].Bypass);
+        Assert.AreEqual("socks-cob-cib-2:123", gostCfg.Chains[6].Hops?[0].Nodes?[1].Addr);
+        Assert.AreEqual(GostProxySync.SocksType, gostCfg.Chains[6].Hops?[0].Nodes?[1].Connector?.Type);
+        Assert.AreEqual(GostProxySync.NetworkProtocol, gostCfg.Chains[6].Hops?[0].Nodes?[1].Dialer?.Type);
+        Assert.AreEqual(GostBypassSync.BypassMullvadGroup, gostCfg.Chains[6].Hops?[0].Nodes?[2].Bypass);
+        Assert.AreEqual("socks-cob-cib-3:123", gostCfg.Chains[6].Hops?[0].Nodes?[2].Addr);
+        Assert.AreEqual(GostProxySync.SocksType, gostCfg.Chains[6].Hops?[0].Nodes?[2].Connector?.Type);
+        Assert.AreEqual(GostProxySync.NetworkProtocol, gostCfg.Chains[6].Hops?[0].Nodes?[2].Dialer?.Type);
+    }
+
+    /// <summary>
+    /// Tests for change tracking of <see cref="GostProxySync.UpdateMullvadServersAsync"/>
+    /// </summary>
+    [TestMethod]
+    public async Task UpdateMullvadServersAsyncChangeTracking()
+    {
+        var gatewayCfg = new GatewayConfig { UpdateServersOnStartup = false };
         var gostCfg = new GostConfig();
 
         if (File.Exists(GostProxySync.RelayFile)) File.Delete(GostProxySync.RelayFile);
@@ -305,9 +518,9 @@ public class GostProxySyncTests
         Assert.IsTrue(changed, "Proxies must be changed if GOST config was empty");
 
         changed = await GostProxySync.UpdateMullvadServersAsync(gostCfg, gatewayCfg, "eth0").ConfigureAwait(false);
-        Assert.IsFalse(changed, "As long as AlwaysGenerateServers is false the proxies should not be updated if any exists");
+        Assert.IsFalse(changed, "As long as UpdateServersOnStartup is false the proxies should not be updated if any exists");
 
-        gatewayCfg.AlwaysGenerateServers = true;
+        gatewayCfg.UpdateServersOnStartup = true;
         changed = await GostProxySync.UpdateMullvadServersAsync(gostCfg, gatewayCfg, "eth0").ConfigureAwait(false);
         Assert.IsFalse(changed, "As long as no new relay servers have been added the proxy list should not be changed");
 
@@ -329,27 +542,28 @@ public class GostProxySyncTests
         changed = await GostProxySync.UpdateMullvadServersAsync(gostCfg, gatewayCfg, "eth0").ConfigureAwait(false);
         Assert.IsTrue(changed, "A renamed changed server socks name should result in a changed since the related pool is updated");
         Assert.IsTrue(relayJson.Remove(modRelay), "Failed to remove mod relay");
-        
+
         modRelay = removedRelay with { CountryCode = "test" + removedRelay.CountryCode };
         relayJson.Insert(0, modRelay);
         await File.WriteAllTextAsync(GostProxySync.RelayFile, JsonSerializer.Serialize(relayJson)).ConfigureAwait(false);
         changed = await GostProxySync.UpdateMullvadServersAsync(gostCfg, gatewayCfg, "eth0").ConfigureAwait(false);
         Assert.IsTrue(changed, "A renamed changed server country code name should result in a changed since the related pool is updated");
         Assert.IsTrue(relayJson.Remove(modRelay), "Failed to remove mod relay");
-        
+
         modRelay = removedRelay with { CityCode = "test" + removedRelay.CityCode };
         relayJson.Insert(0, modRelay);
         await File.WriteAllTextAsync(GostProxySync.RelayFile, JsonSerializer.Serialize(relayJson)).ConfigureAwait(false);
         changed = await GostProxySync.UpdateMullvadServersAsync(gostCfg, gatewayCfg, "eth0").ConfigureAwait(false);
         Assert.IsTrue(changed, "A changed relay server city code should result in a changed since the related pool is updated");
         Assert.IsTrue(relayJson.Remove(modRelay), "Failed to remove mod relay");
-        
+
         modRelay = removedRelay with { SocksPort = removedRelay.SocksPort + 1 };
         relayJson.Insert(0, modRelay);
         await File.WriteAllTextAsync(GostProxySync.RelayFile, JsonSerializer.Serialize(relayJson)).ConfigureAwait(false);
         changed = await GostProxySync.UpdateMullvadServersAsync(gostCfg, gatewayCfg, "eth0").ConfigureAwait(false);
         Assert.IsTrue(changed, "A changed relay server city port should result in a changed since the related pool is updated");
         Assert.IsTrue(relayJson.Remove(modRelay), "Failed to remove mod relay");
+        await File.WriteAllTextAsync(GostProxySync.RelayFile, JsonSerializer.Serialize(relayJson)).ConfigureAwait(false);
     }
 
     private async Task<bool> IsRelaysApiReachable()

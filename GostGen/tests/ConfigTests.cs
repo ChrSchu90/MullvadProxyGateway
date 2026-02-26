@@ -37,6 +37,22 @@ public sealed class ConfigTests
         var cfg = GatewayConfig.FromText(GetTestJson());
         Assert.IsTrue(cfg.Validate(out var error), "Test config validation failed");
         Assert.IsNull(error, "Test config validation error message not null");
+        
+        Assert.IsTrue(cfg.Validate(out error), "Default config settings are invalid");
+        Assert.IsNull(error, "Default config setting generate a error message");
+        
+        var oldMaxServersPerCity = cfg.MaxServersPerCity;
+        var oldCityRandomPools = cfg.CityRandomPools;
+        cfg.MaxServersPerCity = 0;
+        cfg.CityRandomPools = false;
+        Assert.IsFalse(cfg.Validate(out error), "MaxServersPerCity must me at least 1");
+        Assert.IsNotNull(error, "Config validation error message should not be null if MaxServersPerCity is 0");
+        cfg.MaxServersPerCity = 0;
+        cfg.CityRandomPools = true;
+        Assert.IsFalse(cfg.Validate(out error), "MaxServersPerCity must me at least 1");
+        Assert.IsNotNull(error, "Config validation error message should not be null if MaxServersPerCity is 0");
+        cfg.MaxServersPerCity = oldMaxServersPerCity;
+        cfg.CityRandomPools = oldCityRandomPools;
 
         var oldBypasses = cfg.Bypasses;
         cfg.Bypasses = [];
@@ -114,36 +130,35 @@ public sealed class ConfigTests
         Assert.AreEqual(expectedContent, loadedContent, "Config content does not match");
     }
 
+    /// <summary>
+    /// Gets a minimum config as YAML that is valid.
+    /// </summary>
+    /// <returns>The yaml content.</returns>
     private static string GetTestYaml()
     {
         return """
                LogLevel: Debug
-               AlwaysGenerateServers: false
                Users:
                  User1:
                    Password: Password1
                  User2:
                    Password: Password2
-               Bypasses:
-               - 'example.com'
-               - '*.example.com'
                """;
     }
 
+    /// <summary>
+    /// Gets a minimum config as JSON that is valid.
+    /// </summary>
+    /// <returns>The json content.</returns>
     private static string GetTestJson()
     {
         return """
                {
                    "LogLevel": "Debug",
-                   "AlwaysGenerateServers": false,
                    "Users": {
                        "User1": { "Password": "Password1" },
                        "User2": { "Password": "Password2" }
-                   },
-                   "Bypasses": [
-                       "example.com",
-                       "*.example.com"
-                   ]
+                   }
                }
                """;
     }

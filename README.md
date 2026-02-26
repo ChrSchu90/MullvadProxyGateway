@@ -11,7 +11,7 @@ Route the traffic from any device or application through it and connect seamless
 
 - ✅ Container healthcheck
 - ✅ Local SOCKS5 proxy
-- ✅ Dedicated SOCKS5 proxy server per [Mullvad city](https://mullvad.net/en/servers?type=wireguard) (up to 9 per city)
+- ✅ Dedicated SOCKS5 proxy server per [Mullvad city](https://mullvad.net/en/servers?type=wireguard)
 - ✅ One SOCKS5 proxy server pool per [Mullvad city](https://mullvad.net/en/servers?type=wireguard) with endpoint rotation
 - ✅ Filter Mullvad proxies by country and city or ownership (rented/owned) 
 - ✅ Updatable server list on container start (optional)
@@ -28,7 +28,7 @@ The container uses `GostGen` to create or update the `gost.yaml` configuration f
 Because a large number of proxy endpoints is generated, the resulting configuration can become very large (12k+ lines).
 Available servers are fetched from the [Mullvad Relay API](https://api.mullvad.net/www/relays/wireguard) to keep endpoints up to date.
 
-Servers will be automatically added or updated when the container starts if AlwaysGenerateServers is enabled (disabled by default).
+Servers will be automatically added or updated when the container starts if `UpdateServersOnStartup` is enabled (default disabled).
 If a new server is added to the Mullvad network, it will be assigned the next available port number after the last existing one. 
 This prevents changes to the port assignments of existing locations.
 
@@ -83,11 +83,21 @@ Endpoint = de-fra-wg-001.mullvad.net:51820
 
 ### Gateway config 🤖
 
+> [!IMPORTANT]
+> ***Do not change the `MaxServersPerCity` value in production!***
+>
+> Modifying this value will shift the assigned container proxy ports.
+> Before starting the container with a modified `MaxServersPerCity` value, 
+> make sure to delete the existing `gost.yaml` file. This ensures consistent 
+> ordering and prevents endpoints from being reassigned incorrectly.
+
 Example `gateway.yaml`:
 ```yaml
 LogLevel: Information               # Logging level (Verbose, Debug, Information, Warning, Error or Fatal)
-AlwaysGenerateServers: false        # Always update the proxy server list on container start if true
-GostMetricsEnabled: false           # Enable GOST Metrics (Prometheus endpoint) curl -v -u user:password http://ip:9100/metrics
+UpdateServersOnStartup: false       # Always update the proxy server list for GOST on container start, if true
+MaxServersPerCity: 10               # Maximum amount of proxy endpoints per city
+CityRandomPools: true               # Creates 1 proxy per city that randomly selects an exit node within that city (counts as 1 toward `MaxServersPerCity` and includes all available endpoints)
+GostMetricsEnabled: false           # Enable GOST Metrics (Prometheus endpoint) `curl -v -u user:password http://ip:9100/metrics`
 Users:                              # List of users with access to the proxy and their permissions
   User1:                            # Name of the user (can be freely chosen)
     Password: Password1             # Password for the user (can be freely chosen)
@@ -104,10 +114,10 @@ Bypasses:                           # Optional: List of URLs that bypasses the M
 - '*.example.com'
 ProxyFilter:                        # Optional: Proxy server filter
   OwnedOnly: false                  # Optional: Only include proxies from owned locations (no rented servers)
-  Country:
+  Country:                          # Optional: Country filter settings
     Include: ["de", "ch", "nl"]     # Optional: Include only specific countries (country codes or names)
     Exclude: []                     # Optional: Exclude specific countries (country codes or names)
-  City:
+  City:                             # Optional: City filter settings
     Include: []                     # Optional: Include only specific cities (city codes or names)
     Exclude: ["dus", "ber"]         # Optional: Exclude specific cities (city codes or names)
 ```
@@ -140,7 +150,7 @@ services:
     ports:
       - "1080:1080"             # Local proxy
       - "9100:9100"             # Prometheus Metrics (optional)
-      - "2000-3000:2000-3000"   # Dynamic Mullvad proxies
+      - "2000-5000:2000-5000"   # Dynamic Mullvad proxies (amount of used ports depends on config)
     volumes:
       - mullvad-proxy-gateway_data:/data
     cap_add:
@@ -163,7 +173,7 @@ docker run -d \
   --restart unless-stopped \
   -p 1080:1080 \
   -p 9100:9100 \
-  -p 2000-3000:2000-3000 \
+  -p 2000-5000:2000-5000 \
   -v mullvad-proxy-gateway_data:/data \
   --cap-add=NET_ADMIN \
   --sysctl net.ipv4.conf.all.src_valid_mark=1 \
