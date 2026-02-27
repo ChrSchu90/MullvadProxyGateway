@@ -63,23 +63,11 @@ The following configuration **files are required to run the container**:
 Open the [WireGuard configuration file generator](https://mullvad.net/en/account/wireguard-config) 
 and download multiple configuration files (for example, for Germany – Frankfurt).
 
-Place the downloaded configuration files in the data folder.
-Please note that the file names determine the order in which the connections are attempted, so name them accordingly (e.g., de-fra-wg-001.conf, de-fra-wg-002.conf, de-fra-wg-003.conf, etc.).
+Place the downloaded configuration files in the `data` folder.
+Note that the file names determine the order in which the connections are attempted, 
+so name them accordingly (e.g., de-fra-wg-001.conf, de-fra-wg-002.conf, de-fra-wg-003.conf, etc.).
 
 You may also include configurations for different locations. The first successfully working configuration will be used.
-
-Example `de-fra-wg-001.conf`:
-```ini
-[Interface]
-PrivateKey = YOUR_PRIVATE_KEY_HERE
-Address = 10.0.0.5/32, bbbb:bbbb:bbbb:bbbb::5:bbbb/128
-DNS = 10.64.0.1
-
-[Peer]
-PublicKey = SERVER_PUBLIC_KEY_HERE
-AllowedIPs = 0.0.0.0/0, ::/0
-Endpoint = de-fra-wg-001.mullvad.net:51820
-```
 
 ### Gateway config 🤖
 
