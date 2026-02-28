@@ -6,7 +6,7 @@ NC="\033[0m"
 printf "\n\n\n${BLUE}############ Starting Gost Config Generator... ############${NC}\n"
 ./GostGen
 
-printf "\n\n\n${BLUE}############ Starting WireGard VPN... ############${NC}\n"
+printf "\n\n\n${BLUE}############ Starting WireGuard VPN... ############${NC}\n"
 resolvconf -a control 2>/dev/null < /etc/resolv.conf
 resolvconf -u
 WG_CONFIG_PATTERN="/data/*.conf"
