@@ -23,7 +23,7 @@ trap cleanup EXIT INT TERM
 for cfg in $WG_CONFIG_PATTERN; do
   [ -f "$cfg" ] || continue
   if ! grep -q "^\[Interface\]" "$cfg" || ! grep -q "^\[Peer\]" "$cfg"; then
-    printf "**** Found %s but it doesn't seem valid, skipping\n****" "$cfg"
+    printf "**** Found %s but it doesn't seem valid, skipping ****\n" "$cfg"
     continue
   fi
   printf "**** Trying WireGuard config: %s ****\n" "$cfg"
