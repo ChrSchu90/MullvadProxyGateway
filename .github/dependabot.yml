@@ -6,13 +6,22 @@ updates:
       - dependency-name: "actions/checkout"
     schedule:
       interval: "weekly"
+      day: "friday"
+      time: "12:00"
+      timezone: "Europe/Berlin"
   
   - package-ecosystem: "nuget"
     directory: "/GostGen/source"
     schedule:
       interval: "weekly"
+      day: "friday"
+      time: "12:00"
+      timezone: "Europe/Berlin"
 
   - package-ecosystem: "docker"
     directory: "/"
     schedule:
       interval: "weekly"
+      day: "friday"
+      time: "12:00"
+      timezone: "Europe/Berlin"
