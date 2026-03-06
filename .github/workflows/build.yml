@@ -77,7 +77,7 @@ jobs:
 
     - name: Docker Buildx Setup
       if: ${{ steps.dockerqemu.outcome == 'success' }}
-      uses: docker/setup-buildx-action@v3
+      uses: docker/setup-buildx-action@v4
       id: dockersetup
 
     - name: Docker Login
