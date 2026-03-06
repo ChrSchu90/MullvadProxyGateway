@@ -109,7 +109,7 @@ jobs:
 
     - name: Docker build/push
       if: ${{ steps.dockermeta.outcome == 'success' }}
-      uses: docker/build-push-action@v6
+      uses: docker/build-push-action@v7
       id: dockerbuild
       with:
         context: .
