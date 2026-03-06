@@ -81,7 +81,7 @@ jobs:
       id: dockersetup
 
     - name: Docker Login
-      uses: docker/login-action@v3
+      uses: docker/login-action@v4
       if: ${{ steps.dockersetup.outcome == 'success' }}
       id: dockerlogin
       with:
