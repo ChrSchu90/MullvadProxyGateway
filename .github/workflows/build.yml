@@ -91,7 +91,7 @@ jobs:
 
     - name: Docker tags/labels
       if: ${{ steps.dockerlogin.outcome == 'success' }}
-      uses: docker/metadata-action@v5
+      uses: docker/metadata-action@v6
       id: dockermeta
       with:
         images: ${{ env.DOCKER_REGISTRY }}/${{ env.DOCKER_IMAGE_NAME }}
