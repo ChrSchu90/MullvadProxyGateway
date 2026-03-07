@@ -2,8 +2,6 @@ version: 2
 updates:
   - package-ecosystem: "github-actions"
     directory: "/" # default location of `.github/workflows`
-    ignore:
-      - dependency-name: "actions/checkout"
     schedule:
       interval: "weekly"
       day: "friday"
