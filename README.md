@@ -113,6 +113,7 @@ ProxyFilter:                        # Optional: Proxy server filter
 ### Docker examples 🐳
 
 This image follows semantic versioning.
+Use specific version tags for reproducibility. Preview tags are not recommended for production.
 
 #### Stable
 - `latest` – Most recent stable release
@@ -132,7 +133,7 @@ This image follows semantic versioning.
 ```yaml
 services:
   mullvad-proxy-gateway:
-    image: ghcr.io/chrschu90/mullvad-proxy-gateway:latest
+    image: ghcr.io/chrschu90/mullvad-proxy-gateway:1
     container_name: mullvad-proxy-gateway
     restart: unless-stopped
     ports:
@@ -166,10 +167,8 @@ docker run -d \
   --cap-add=NET_ADMIN \
   --sysctl net.ipv4.conf.all.src_valid_mark=1 \
   -e TZ=Europe/Berlin \
-  ghcr.io/chrschu90/mullvad-proxy-gateway:latest
+  ghcr.io/chrschu90/mullvad-proxy-gateway:1
 ```
-
-Use specific version tags for reproducibility. Preview tags are not recommended for production.
 
 ## Exports 📤
 To easyly generate importable proxy lists for other applications, the container exports the available Mullvad proxies as CSV and JSON files.
