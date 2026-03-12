@@ -2,8 +2,22 @@
 
 [![Build](https://github.com/ChrSchu90/MullvadProxyGateway/actions/workflows/build.yml/badge.svg)](https://github.com/ChrSchu90/MullvadProxyGateway/actions/workflows/build.yml)
 
-Turn a single Mullvad WireGuard client into a shared SOCKS5 proxy server that lets you connect to any city provided by Mullvad. 
-Route the traffic from any device or application through it and connect seamlessly to any Mullvad location.
+> [!NOTE]
+> This is **not an official Mullvad project** and isn’t affiliated with or endorsed by **Mullvad VPN AB**.
+>
+> The name “Mullvad” is solely used to indicate the use and requirement of their services.
+> All trademarks and service names belong to their respective owners.
+
+The **Mullvad Proxy Gateway** transforms a single Mullvad WireGuard connection into a containerized SOCKS5 proxy platform.
+
+Instead of running multiple VPN clients, this container establishes one secure WireGuard tunnel into the Mullvad network 
+and exposes dedicated SOCKS5 endpoints for every available Mullvad city worldwide. Route traffic from any device 
+or application through it and connect seamlessly to any Mullvad location — simply by selecting the corresponding proxy port.
+
+For example, you can use your favorite browser proxy extension to switch between cities on the fly — instantly 
+changing your exit location without reconnecting a VPN or restarting applications. Alternatively, configure 
+only specific applications (e.g., a scraper or download client) to use the SOCKS5 proxy, while the rest of your 
+system traffic continues to use your regular local connection. No full-device VPN routing required.
 
 <img height="180" src="https://github.com/user-attachments/assets/ec9d8b72-6827-4289-b076-c8b40f50fdd9" />
 
