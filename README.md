@@ -78,7 +78,7 @@ and download multiple configuration files (for example, for Germany – Frankfur
 
 Place the downloaded configuration files in the `data` volume.
 Note that the file names determine the order in which the connections are attempted, 
-so name them accordingly (e.g., 01-de-fra-wg-001.conf, 02-de-fra-wg-002.conf, 03-de-fra-wg-003.conf, etc.).
+so name them accordingly (e.g., 01-de-fra.conf, 02-de-fra.conf, 03-de-fra.conf, etc.).
 
 You may also include configurations for different locations. The first successfully working configuration will be used.
 
