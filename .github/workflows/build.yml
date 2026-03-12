@@ -64,13 +64,13 @@ jobs:
       if: ${{ steps.tagver.outputs.is_valid == 'true' }}
       run: dotnet publish ${{ env.NET_PROJECT }} -r linux-musl-x64 ${{ env.NET_PUBLISH_ARGS }} -p:Version=${{ steps.tagver.outputs.version }} -o ${{ env.NET_PUBLISH_DIR }}linux/amd64
 
+    - name: .NET Publish arm64
+      if: ${{ steps.tagver.outputs.is_valid == 'true' }}
+      run: dotnet publish ${{ env.NET_PROJECT }} -r linux-musl-arm64 ${{ env.NET_PUBLISH_ARGS }} -p:Version=${{ steps.tagver.outputs.version }} -o ${{ env.NET_PUBLISH_DIR }}linux/arm64
+
     - name: .NET Publish armv7
       if: ${{ steps.tagver.outputs.is_valid == 'true' }}
       run: dotnet publish ${{ env.NET_PROJECT }} -r linux-musl-arm ${{ env.NET_PUBLISH_ARGS }} -p:Version=${{ steps.tagver.outputs.version }} -o ${{ env.NET_PUBLISH_DIR }}linux/armv7
-
-    - name: .NET Publish armv8
-      if: ${{ steps.tagver.outputs.is_valid == 'true' }}
-      run: dotnet publish ${{ env.NET_PROJECT }} -r linux-musl-arm64 ${{ env.NET_PUBLISH_ARGS }} -p:Version=${{ steps.tagver.outputs.version }} -o ${{ env.NET_PUBLISH_DIR }}linux/arm64
 
     - name: Docker QEMU Setup
       if: ${{ steps.tagver.outputs.is_valid == 'true' }}
