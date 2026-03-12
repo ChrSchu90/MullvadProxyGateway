@@ -27,12 +27,11 @@ system traffic continues to use your regular local connection. No full-device VP
 - ✅ Local SOCKS5 proxy
 - ✅ Dedicated SOCKS5 proxy server per [Mullvad city](https://mullvad.net/en/servers?type=wireguard)
 - ✅ One SOCKS5 proxy server pool per [Mullvad city](https://mullvad.net/en/servers?type=wireguard) with endpoint rotation
-- ✅ Filter Mullvad proxies by country and city or ownership (rented/owned) 
+- ✅ Filter Mullvad proxies by country, city or ownership (rented/owned) 
 - ✅ Updatable server list on container start (optional)
-- ✅ Configurable users
-- ✅ User roles (Mullvad proxy, local proxy and metrics)
-- ✅ Configurable bypasses (route traffic locally for defined URLs)
-- ✅ Export proxy list as CSV and JSON
+- ✅ Configurable users with roles (Mullvad proxy, local proxy and metrics)
+- ✅ Configurable bypasses to route traffic locally for specific URLs (optional)
+- ✅ Export of proxies as `CSV` and `JSON`
 - ✅ [GOST Prometheus Metrics](https://gost.run/en/tutorials/metrics/) (optional)
 - ✅ Multiple WireGuard configurations with connection check on container start
 
@@ -42,8 +41,8 @@ The container uses `GostGen` to create or update the `gost.yaml` configuration f
 Because a large number of proxy endpoints is generated, the resulting configuration can become very large (12k+ lines).
 Available servers are fetched from the [Mullvad Relay API](https://api.mullvad.net/www/relays/wireguard) to keep endpoints up to date.
 
-Servers will be automatically added or updated when the container starts if `UpdateServersOnStartup` is enabled (default disabled).
-If a new server is added to the Mullvad network, it will be assigned the next available port number after the last existing one. 
+Servers will be automatically added or updated when the container starts if `UpdateServersOnStartup` is `true` (default `false`).
+If a new server or city is added to the Mullvad network, it will be assigned to the next available port number after the last existing one. 
 This prevents changes to the port assignments of existing locations.
 
 After that, `wg-quick` starts the WireGuard connection.
@@ -77,9 +76,9 @@ The following configuration **files are required to run the container**:
 Open the [WireGuard configuration file generator](https://mullvad.net/en/account/wireguard-config) 
 and download multiple configuration files (for example, for Germany – Frankfurt).
 
-Place the downloaded configuration files in the `data` folder.
+Place the downloaded configuration files in the `data` volume.
 Note that the file names determine the order in which the connections are attempted, 
-so name them accordingly (e.g., de-fra-wg-001.conf, de-fra-wg-002.conf, de-fra-wg-003.conf, etc.).
+so name them accordingly (e.g., 01-de-fra-wg-001.conf, 02-de-fra-wg-002.conf, 03-de-fra-wg-003.conf, etc.).
 
 You may also include configurations for different locations. The first successfully working configuration will be used.
 
@@ -129,13 +128,10 @@ ProxyFilter:                        # Optional: Proxy server filter
 This image follows semantic versioning.
 Use specific version tags for reproducibility. Preview tags are not recommended for production.
 
-#### Stable
 - `latest` – Most recent stable release
 - `1` – Latest stable release in major version `1`
 - `1.1` – Latest stable release in minor version `1.1`
 - `1.1.1` – Specific stable patch version (fully pinned)
-
-#### Preview
 - `preview` – Latest preview build
 - `1-preview` – Latest preview for major version `1`
 - `1.1-preview` – Latest preview for minor version `1.1`
