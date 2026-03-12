@@ -1,15 +1,17 @@
 FROM alpine:3.23
-ARG GOST_VERSION=3.2.6
-ARG TARGETPLATFORM
+
 ARG TARGETOS
 ARG TARGETARCH
 ARG TARGETVARIANT
+ARG GOST_VERSION=3.2.6
 
 # Install required tools, dotnet dependencies and wireguard dependencies + fixes
-RUN apk add --no-cache curl \
+RUN apk add --no-cache curl grep \
     icu-libs icu-data-full \
     iproute2 iptables ip6tables openresolv wireguard-tools && \
     echo "wireguard" >> /etc/modules && \
+    rm -rf /etc/wireguard && \
+    ln -s /config/wg_confs /etc/wireguard && \
     sed -i 's|\[\[ $proto == -4 \]\] && cmd sysctl -q net\.ipv4\.conf\.all\.src_valid_mark=1|[[ $proto == -4 ]] \&\& [[ $(sysctl -n net.ipv4.conf.all.src_valid_mark) != 1 ]] \&\& cmd sysctl -q net.ipv4.conf.all.src_valid_mark=1|' /usr/bin/wg-quick && \
     rm -rf /tmp/* /var/tmp/* /var/cache/distfiles/*
 
