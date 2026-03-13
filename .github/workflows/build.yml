@@ -22,7 +22,7 @@ env:
   NET_PUBLISH_DIR: GostGen/publish/
   NET_PUBLISH_ARGS: "--verbosity normal --configuration Release -p:DebugType=embedded -p:PublishSingleFile=true --self-contained"
   DOCKER_REGISTRY: ghcr.io
-  DOCKER_IMAGE_NAME: ${{ github.repository_owner }}/mullvad-proxy-gateway
+  DOCKER_IMAGE_NAME: mullvad-proxy-gateway
   DOCKER_PLATFORMS: linux/amd64,linux/arm64/v8,linux/arm/v7
 
 jobs:
@@ -101,7 +101,7 @@ jobs:
       uses: docker/metadata-action@v6
       id: dockermeta
       with:
-        images: ${{ env.DOCKER_REGISTRY }}/${{ env.DOCKER_IMAGE_NAME }}
+        images: ${{ env.DOCKER_REGISTRY }}/${{ github.repository_owner }}/${{ env.DOCKER_IMAGE_NAME }}
         tags: |
           # latest – Most recent stable release
           type=raw,value=latest,enable=${{ steps.tagver.outputs.is_release == 'true' }}
@@ -127,7 +127,6 @@ jobs:
     - name: Docker build/push
       if: ${{ steps.dockermeta.outcome == 'success' }}
       uses: docker/build-push-action@v7
-      id: dockerbuild
       with:
         context: .
         push: ${{ steps.tagver.outputs.is_valid == 'true' }}
