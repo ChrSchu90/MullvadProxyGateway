@@ -1,25 +1,16 @@
 #!/bin/sh
 
-BLUE="\033[38;5;117m"
-NC="\033[0m"
-
-printf "\n\n\n${BLUE}############ Starting Gost Config Generator... ############${NC}\n"
+printf "\n\n\n############ Starting Gost Config Generator... ############\n"
 ./GostGen
 
-printf "\n\n\n${BLUE}############ Starting WireGuard VPN... ############${NC}\n"
+printf "\n\n\n############ Preparing DNS resolver... ############\n"
 resolvconf -a control 2>/dev/null < /etc/resolv.conf
 resolvconf -u
+
+printf "\n\n\n############ Starting WireGuard VPN... ############\n"
 WG_CONFIG_PATTERN="/data/*.conf"
 WG_CHECK="curl -fsS --connect-timeout 5 --max-time 5 https://am.i.mullvad.net/json | grep -q '\"mullvad_exit_ip\":true'"
 WG_STARTED=""
-cleanup() {
-  if [ -n "$WG_STARTED" ]; then
-    printf "**** Shutdown WireGuard: %s ****\n" "$WG_STARTED"
-    wg-quick down "$WG_STARTED" >/dev/null
-    WG_STARTED=""
-  fi
-}
-trap cleanup EXIT INT TERM
 for cfg in $WG_CONFIG_PATTERN; do
   [ -f "$cfg" ] || continue
   if ! grep -q "^\[Interface\]" "$cfg" || ! grep -q "^\[Peer\]" "$cfg"; then
@@ -45,5 +36,5 @@ if [ -z "$WG_STARTED" ]; then
   exit 1
 fi
 
-printf "\n\n\n${BLUE}############ Starting Proxies... ############${NC}\n"
-./gost -C /data/gost.yaml
+printf "\n\n\n############ Starting Proxies... ############\n"
+exec ./gost -C /data/gost.yaml
