@@ -181,8 +181,8 @@ docker run -d \
 ```
 
 ## Exports 📤
-To easyly generate importable proxy lists for other applications, the container exports the available Mullvad proxies as CSV and JSON files.
-Sice the container does not know the external IP address, the export can't include the local IP with port.
+To easily generate importable proxy lists for other applications, the container exports the available Mullvad proxies as CSV and JSON files.
+Since the container does't know the external IP address, the export can't include the proxy IP.
 
 📄 CSV example `data/proxies.csv`:
 
