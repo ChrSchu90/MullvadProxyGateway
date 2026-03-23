@@ -112,15 +112,15 @@ jobs:
           # Specific stable patch version (fully pinned)
           type=raw,value=${{ steps.tagver.outputs.version }},enable=${{ steps.tagver.outputs.is_release == 'true' }}
           # Latest preview build
-          type=raw,value=preview,enable=${{ steps.tagver.outputs.is_prerelease == 'true' }}
+          type=raw,value=preview,enable=${{ steps.tagver.outputs.is_prerelease == 'true' || steps.tagver.outputs.is_release == 'true' }}
           # Latest preview for major version
-          type=raw,value=${{ steps.tagver.outputs.major }}-preview,enable=${{ steps.tagver.outputs.is_prerelease == 'true' }}
+          type=raw,value=${{ steps.tagver.outputs.major }}-preview,enable=${{ steps.tagver.outputs.is_prerelease == 'true' || steps.tagver.outputs.is_release == 'true' }}
           # Latest preview for minor + minor version
-          type=raw,value=${{ steps.tagver.outputs.major }}.${{ steps.tagver.outputs.minor }}-preview,enable=${{ steps.tagver.outputs.is_prerelease == 'true' }}
+          type=raw,value=${{ steps.tagver.outputs.major }}.${{ steps.tagver.outputs.minor }}-preview,enable=${{ steps.tagver.outputs.is_prerelease == 'true' || steps.tagver.outputs.is_release == 'true' }}
           # Latest preview for minor + minor + patch version
-          type=raw,value=${{ steps.tagver.outputs.version }}-preview,enable=${{ steps.tagver.outputs.is_prerelease == 'true' }}
+          type=raw,value=${{ steps.tagver.outputs.version }}-preview,enable=${{ steps.tagver.outputs.is_prerelease == 'true' || steps.tagver.outputs.is_release == 'true' }}
           # Specific preview build (fully pinned)
-          type=raw,value=${{ steps.tagver.outputs.version }}-${{ steps.tagver.outputs.suffix }},enable=${{ steps.tagver.outputs.is_prerelease == 'true' }}
+          type=raw,value=${{ steps.tagver.outputs.version }}-${{ steps.tagver.outputs.suffix }},enable=${{ steps.tagver.outputs.is_prerelease == 'true' || steps.tagver.outputs.is_release == 'true' }}
           # Test build
           type=raw,value=ci,enable=${{ steps.tagver.outputs.is_valid != 'true' }}
 
