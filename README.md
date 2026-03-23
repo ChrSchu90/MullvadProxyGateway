@@ -130,13 +130,13 @@ Use specific version tags for reproducibility. Preview tags are not recommended 
 
 - `latest` – Most recent stable release
 - `1` – Latest stable release in major version `1`
-- `1.1` – Latest stable release in minor version `1.1`
-- `1.1.1` – Specific stable patch version (fully pinned)
+- `1.2` – Latest stable release in minor version `1.2`
+- `1.2.3` – Specific stable patch version (fully pinned)
 - `preview` – Latest preview build
 - `1-preview` – Latest preview for major version `1`
-- `1.1-preview` – Latest preview for minor version `1.1`
-- `1.1.1-preview` – Latest preview for patch version `1.1.1`
-- `1.1.1-beta.1` – Specific preview build
+- `1.2-preview` – Latest preview for minor version `1.2`
+- `1.2.3-preview` – Latest preview for patch version `1.2.3`
+- `1.2.3-beta.1` – Specific preview build (fully pinned)
 
 #### Compose 🧩:
 
