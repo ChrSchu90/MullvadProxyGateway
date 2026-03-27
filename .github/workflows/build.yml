@@ -22,7 +22,7 @@ env:
   NET_PUBLISH_DIR: GostGen/publish/
   NET_PUBLISH_ARGS: "--verbosity normal --configuration Release -p:DebugType=embedded -p:PublishSingleFile=true --self-contained"
   DOCKER_REGISTRY: ghcr.io
-  DOCKER_FULL_IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/mullvad-proxy-gateway
+  DOCKER_FULL_IMAGE_NAME: ghcr.io/chrschu90/mullvad-proxy-gateway # Make sure to use lowercase only
   DOCKER_PLATFORMS: linux/amd64,linux/arm64/v8,linux/arm/v7
 
 jobs:
