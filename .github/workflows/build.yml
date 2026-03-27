@@ -148,15 +148,17 @@ jobs:
       env:
         IMAGE_REF: ${{ env.DOCKER_FULL_IMAGE_NAME }}@${{ steps.docker_build.outputs.digest }}
       run: |
-        echo "::notice::Signing image: ${IMAGE_REF}"        
+        echo "::notice::Signing image: ${IMAGE_REF}"
         for i in {1..5}; do
           if cosign sign --yes "${IMAGE_REF}"; then
             echo "Signed: ${IMAGE_REF}"
+            echo "signed=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
           echo "Signing attempt ${i} failed, retrying..."
           sleep $((2 ** i))
-        done        
+        done
+        echo "signed=false" >> "$GITHUB_OUTPUT"
         echo "::error::Failed to sign image ${IMAGE_REF}"
         exit 1
 
@@ -170,7 +172,7 @@ jobs:
         COSIGN_IDENTITY: ^https://github.com/${{ github.repository }}/.*$
         COSIGN_ISSUER: https://token.actions.githubusercontent.com
       run: |
-        echo "::notice::Verifying image: ${IMAGE_REF}"        
+        echo "::notice::Verifying image: ${IMAGE_REF}"
         for i in {1..5}; do
           if cosign verify \
             --certificate-identity-regexp "${COSIGN_IDENTITY}" \
@@ -182,7 +184,7 @@ jobs:
           fi
           echo "Verification attempt ${i} failed, retrying..."
           sleep $((2 ** i))
-        done        
+        done
         echo "verified=false" >> "$GITHUB_OUTPUT"
         echo "::error::Image verification failed for ${IMAGE_REF}"
         exit 1
