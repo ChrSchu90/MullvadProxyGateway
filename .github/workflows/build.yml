@@ -168,8 +168,11 @@ jobs:
       shell: bash
       env:
         IMAGE_REF: ${{ env.DOCKER_FULL_IMAGE_NAME }}@${{ steps.docker_build.outputs.digest }}
+        #COSIGN_IDENTITY: ^https://github.com/${{ github.repository }}/\.github/workflows/build\.yml@refs/tags/v.*$
         #COSIGN_IDENTITY: ^https://github.com/${{ github.repository }}/\.github/workflows/.*@refs/tags/v.*$
-        COSIGN_IDENTITY: ^https://github.com/${{ github.repository }}/.*$
+        #COSIGN_IDENTITY: ^https://github.com/${{ github.repository }}/\.github/workflows/.*$
+        #COSIGN_IDENTITY: ^https://github.com/${{ github.repository }}/.*$
+        COSIGN_IDENTITY: ^https://github.com/${{ github.repository }}/\.github/workflows/build\.yml@refs/tags/v.*$
         COSIGN_ISSUER: https://token.actions.githubusercontent.com
       run: |
         echo "::notice::Verifying image: ${IMAGE_REF}"
