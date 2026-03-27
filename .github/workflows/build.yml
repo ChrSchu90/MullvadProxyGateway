@@ -90,7 +90,7 @@ jobs:
     - name: Docker Buildx Setup
       uses: docker/setup-buildx-action@v4
 
-    - name: Install Cosign
+    - name: Cosign Setup
       uses: sigstore/cosign-installer@v4.1.1
 
     - name: Docker Login
@@ -141,7 +141,7 @@ jobs:
         #cache-from: type=gha
         #cache-to: type=gha,mode=max
 
-    - name: Sign Image
+    - name: Docker Sign Image
       if: ${{ steps.tagver.outputs.is_valid == 'true' }}
       id: docker_sign
       shell: bash
@@ -160,7 +160,7 @@ jobs:
         echo "::error::Failed to sign image ${IMAGE_REF}"
         exit 1
 
-    - name: Verify Image
+    - name: Docker Verify Image
       if: ${{ steps.tagver.outputs.is_valid == 'true' }}
       id: docker_verify
       shell: bash
