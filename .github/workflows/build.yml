@@ -141,7 +141,7 @@ jobs:
         #cache-from: type=gha
         #cache-to: type=gha,mode=max
 
-    - name: Docker Sign Image
+    - name: Sign Docker Image
       if: ${{ steps.tagver.outputs.is_valid == 'true' }}
       id: docker_sign
       shell: bash
@@ -162,7 +162,7 @@ jobs:
         echo "::error::Failed to sign image ${IMAGE_REF}"
         exit 1
 
-    - name: Docker Verify Image
+    - name: Verify Docker Image
       if: ${{ steps.tagver.outputs.is_valid == 'true' }}
       id: docker_verify
       shell: bash
