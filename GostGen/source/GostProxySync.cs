@@ -338,7 +338,9 @@ internal class GostProxySync
                     changed = true;
                 }
 
-                proxies.Add(new Proxy(isPool ? 0 : i, server, service, chain, hop));
+                if(!isPool || (isPool && nodeIndex == 0))
+                    proxies.Add(new Proxy(isPool ? 0 : i, server, service, chain, hop));
+
                 return changed;
             }
 
