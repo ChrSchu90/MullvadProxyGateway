@@ -30,9 +30,9 @@ jobs:
     name: Build
     runs-on: ubuntu-latest
     permissions:
-      contents: write
-      id-token: write
-      packages: write
+      packages: write # Docker push image to GHCR
+      id-token: write # GHCR auth and Cosign OIDC signing/verification
+      contents: write # Create/update GitHub Releases
     steps:
     - name: Checkout
       uses: actions/checkout@v6
