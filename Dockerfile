@@ -11,7 +11,6 @@ RUN apk add --no-cache curl grep \
     iproute2 iptables ip6tables openresolv wireguard-tools && \
     echo "wireguard" >> /etc/modules && \
     rm -rf /etc/wireguard && \
-    ln -s /config/wg_confs /etc/wireguard && \
     sed -i 's|\[\[ $proto == -4 \]\] && cmd sysctl -q net\.ipv4\.conf\.all\.src_valid_mark=1|[[ $proto == -4 ]] \&\& [[ $(sysctl -n net.ipv4.conf.all.src_valid_mark) != 1 ]] \&\& cmd sysctl -q net.ipv4.conf.all.src_valid_mark=1|' /usr/bin/wg-quick && \
     rm -rf /tmp/* /var/tmp/* /var/cache/distfiles/*
 
