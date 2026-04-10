@@ -101,8 +101,8 @@ CityRandomPools: true               # Creates 1 proxy per city that randomly sel
 LocalProxyPort: 1080                # Port number for local proxy
 MullvadProxyPortStart: 2000         # Start port number for dynamic Mullvad proxies
 MullvadProxyPortEnd: 5000           # End port number for dynamic Mullvad proxies
-GostMetricsEnabled: false           # Enable GOST Metrics (Prometheus endpoint) `curl -v -u user:password http://ip:9100/metrics`
-GostMetricsPort: 9100               # Port number for GOST Metrics (Prometheus endpoint)
+GostMetricsEnabled: false           # Optional: Enable GOST Metrics (Prometheus endpoint) `curl -v -u user:password http://ip:9100/metrics`
+GostMetricsPort: 9100               # Optional: Port number for GOST Metrics (Prometheus endpoint)
 Users:                              # Optional: List of users with access to the proxy and their permissions
   User1:                            # Optional: Name of the user (can be freely chosen)
     Password: Password1             # Optional: Password for the user (can be freely chosen)
