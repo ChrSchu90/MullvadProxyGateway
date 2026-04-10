@@ -85,6 +85,13 @@ so name them accordingly (e.g., 01-de-fra.conf, 02-de-fra.conf, 03-de-fra.conf, 
 
 You may also include configurations for different locations. The first successfully working configuration will be used.
 
+```
+data/
+  01-de-fra.conf
+  02-de-fra.conf
+  03-de-fra.conf
+```
+
 ### 🤖 Gateway config
 
 > [!IMPORTANT]
