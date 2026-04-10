@@ -153,23 +153,53 @@ Use specific version tags for reproducibility. Preview tags are not recommended 
 - `1.2.3-beta.1` – Specific preview build (fully pinned)
 
 > [!TIP]
-> In certain setups, using the `bridge` network mode may lead to performance issues due to the large number of exposed ports.
-> To mitigate this, consider switching to the `host` network mode instead.
+> In certain setups, using the `bridge` network can cause performance 
+> degradation on container start/stop due to the large number of exposed ports.
 > 
-> **When doing so, ensure that the port configuration in [gateway.yaml](#-gateway-config) is properly adjusted to match your requirements.
-> Additionally, ensure that `net.ipv4.conf.all.src_valid_mark=1` is set on the host system (see [example](Examples/src_valid_mark.sh))**.
+> To avoid this, limit the exposed ports to the required range, or consider
+> using an `ipvlan` or `macvlan` network to assign a dedicated IP address to the container.
 
 #### 🧩 Compose:
 
-[Bridge Network](Examples/compose_bridge.yml)
-
-[Host Network](Examples/compose_host.yml)
+```yaml
+services:
+  mullvad-proxy-gateway:
+    image: ghcr.io/chrschu90/mullvad-proxy-gateway:1
+    container_name: mullvad-proxy-gateway
+    restart: unless-stopped
+    ports:
+      - "1080:1080"             # Local proxy
+      - "9100:9100"             # Prometheus Metrics (optional)
+      - "2000-3000:2000-3000"   # Dynamic Mullvad proxies (amount of used ports depends on config)
+    volumes:
+      - mullvad-proxy-gateway_data:/data
+    cap_add:
+      - NET_ADMIN               # Requirement for WireGuard client
+    sysctls:
+      net.ipv4.conf.all.src_valid_mark: 1 # Requirement for WireGuard client
+    environment:
+      TZ: Europe/Berlin         # Update to your timezone!
+volumes:
+  mullvad-proxy-gateway_data:
+    name: mullvad-proxy-gateway_data
+```
 
 #### 💻 CLI:
 
-[Bridge Network](Examples/cli_bridge.sh)
-
-[Host Network](Examples/cli_host.sh)
+```
+docker volume create mullvad-proxy-gateway_data && \
+docker run -d \
+  --name mullvad-proxy-gateway \
+  --restart unless-stopped \
+  -p 1080:1080 \
+  -p 9100:9100 \
+  -p 2000-3000:2000-3000 \
+  -v mullvad-proxy-gateway_data:/data \
+  --cap-add=NET_ADMIN \
+  --sysctl net.ipv4.conf.all.src_valid_mark=1 \
+  -e TZ=Europe/Berlin \
+  ghcr.io/chrschu90/mullvad-proxy-gateway:1
+```
 
 ## 📤 Exports
 To easily generate importable proxy lists for other applications, the container exports the available Mullvad proxies as CSV and JSON files.
