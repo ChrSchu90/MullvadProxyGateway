@@ -103,12 +103,12 @@ MullvadProxyPortStart: 2000         # Start port number for dynamic Mullvad prox
 MullvadProxyPortEnd: 5000           # End port number for dynamic Mullvad proxies
 GostMetricsEnabled: false           # Enable GOST Metrics (Prometheus endpoint) `curl -v -u user:password http://ip:9100/metrics`
 GostMetricsPort: 9100               # Port number for GOST Metrics (Prometheus endpoint)
-Users:                              # List of users with access to the proxy and their permissions
-  User1:                            # Name of the user (can be freely chosen)
-    Password: Password1             # Password for the user (can be freely chosen)
-    HasMullvadProxyAccess: true     # Access to the Mullvad proxies
-    HasInternalProxyAccess: false   # Access to the local proxy
-    HasMetricsAccess: false         # Access to the GOST metrics
+Users:                              # Optional: List of users with access to the proxy and their permissions
+  User1:                            # Optional: Name of the user (can be freely chosen)
+    Password: Password1             # Optional: Password for the user (can be freely chosen)
+    HasMullvadProxyAccess: true     # Optional: Access to the Mullvad proxies
+    HasInternalProxyAccess: false   # Optional: Access to the local proxy
+    HasMetricsAccess: false         # Optional: Access to the GOST metrics
   User2:
     Password: Password2
     HasMullvadProxyAccess: true
@@ -142,47 +142,24 @@ Use specific version tags for reproducibility. Preview tags are not recommended 
 - `1.2.3-preview` – Latest preview for patch version `1.2.3`
 - `1.2.3-beta.1` – Specific preview build (fully pinned)
 
+> [!TIP]
+> In certain setups, using the `bridge` network mode may lead to performance issues due to the large number of exposed ports.
+> To mitigate this, consider switching to the `host` network mode instead.
+> 
+> When doing so, make sure to update the port configuration in `gateway.yaml` accordingly.
+> Additionally, ensure that `net.ipv4.conf.all.src_valid_mark=1` is set on the host system (see [example](Examples/src_valid_mark.sh)).
+
 #### Compose 🧩:
 
-```yaml
-services:
-  mullvad-proxy-gateway:
-    image: ghcr.io/chrschu90/mullvad-proxy-gateway:1
-    container_name: mullvad-proxy-gateway
-    restart: unless-stopped
-    ports:
-      - "1080:1080"             # Local proxy
-      - "9100:9100"             # Prometheus Metrics (optional)
-      - "2000-5000:2000-5000"   # Dynamic Mullvad proxies (amount of used ports depends on config)
-    volumes:
-      - mullvad-proxy-gateway_data:/data
-    cap_add:
-      - NET_ADMIN               # Requirement for WireGuard client
-    sysctls:
-      net.ipv4.conf.all.src_valid_mark: 1 # Requirement for WireGuard client
-    environment:
-      TZ: Europe/Berlin         # Update to your timezone!
-volumes:
-  mullvad-proxy-gateway_data:
-    name: mullvad-proxy-gateway_data
-```
+[Bridge Network](Examples/compose_bridge.yml)
+
+[Host Network](Examples/compose_host.yml)
 
 #### CLI 💻:
 
-```bash
-docker volume create mullvad-proxy-gateway_data && \
-docker run -d \
-  --name mullvad-proxy-gateway \
-  --restart unless-stopped \
-  -p 1080:1080 \
-  -p 9100:9100 \
-  -p 2000-5000:2000-5000 \
-  -v mullvad-proxy-gateway_data:/data \
-  --cap-add=NET_ADMIN \
-  --sysctl net.ipv4.conf.all.src_valid_mark=1 \
-  -e TZ=Europe/Berlin \
-  ghcr.io/chrschu90/mullvad-proxy-gateway:1
-```
+[Bridge Network](Examples/cli_bridge.sh)
+
+[Host Network](Examples/cli_host.sh)
 
 ## Exports 📤
 To easily generate importable proxy lists for other applications, the container exports the available Mullvad proxies as CSV and JSON files.
