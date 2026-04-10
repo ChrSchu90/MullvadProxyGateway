@@ -2,7 +2,6 @@
     <Folder Name="/Container Items/">
         <File Path="../.dockerignore" />
         <File Path="../debug.sh" />
-        <File Path="../docker-compose.yaml" />
         <File Path="../Dockerfile" />
         <File Path="../README.md" />
         <File Path="../run.sh" />
