@@ -8,7 +8,10 @@
 > The name “Mullvad” is solely used to indicate the use and requirement of their services.
 > All trademarks and service names belong to their respective owners.
 
-The **Mullvad Proxy Gateway** transforms a single Mullvad WireGuard connection into a containerized SOCKS5 proxy platform.
+## 🚀 One tunnel. Every Mullvad location.
+
+The **Mullvad Proxy Gateway** transforms a single Mullvad WireGuard connection into a containerized SOCKS5 proxy platform
+with proxies to every Mullvad city worldwide.
 
 Instead of running multiple VPN clients, this container establishes one secure WireGuard tunnel into the Mullvad network 
 and exposes dedicated SOCKS5 endpoints for every available Mullvad city worldwide. Route traffic from any device 
@@ -21,7 +24,7 @@ system traffic continues to use your regular local connection. No full-device VP
 
 <img height="180" src="https://github.com/user-attachments/assets/ec9d8b72-6827-4289-b076-c8b40f50fdd9" />
 
-## Features ✔️
+## ✔️ Features
 
 - ✅ Container healthcheck
 - ✅ Local SOCKS5 proxy
@@ -35,7 +38,7 @@ system traffic continues to use your regular local connection. No full-device VP
 - ✅ [GOST Prometheus Metrics](https://gost.run/en/tutorials/metrics/) (optional)
 - ✅ Multiple WireGuard configurations with connection check on container start
 
-## How it works 🏗️
+## 🏗️ How it works
 
 The container uses `GostGen` to create or update the `gost.yaml` configuration for the [GOST proxy server](https://gost.run/en).
 Because a large number of proxy endpoints is generated, the resulting configuration can become very large (12k+ lines).
@@ -56,16 +59,16 @@ and select the desired target location by using the corresponding city-specific 
 After connecting to the proxy, you can verify the connection by visiting the
 [Mullvad Connection check](https://mullvad.net/en/check) in your browser.
 
-## Setup 🛠️
+## 🛠️ Setup
 
-### Data volume 📁
+### 📁 Data volume
 
 A `data` volume must be mounted to the container.
 The following configuration **files are required to run the container**:
-- [WireGuard configuration(s)](#mullvad-wireguard-config-) (`*.conf`)
-- [Gateway configuration](#gateway-config-) (`gateway.yaml`)
+- [WireGuard configuration(s)](#-mullvad-wireguard-config) (`*.conf`)
+- [Gateway configuration](#-gateway-config) (`gateway.yaml`)
  
-### Mullvad WireGuard config 🔐
+### 🔐 Mullvad WireGuard config
 
 > [!TIP]
 > Use the **nearest available location** for the VPN connection. 
@@ -82,7 +85,7 @@ so name them accordingly (e.g., 01-de-fra.conf, 02-de-fra.conf, 03-de-fra.conf, 
 
 You may also include configurations for different locations. The first successfully working configuration will be used.
 
-### Gateway config 🤖
+### 🤖 Gateway config
 
 > [!IMPORTANT]
 > ***Do not change the `MaxServersPerCity`, `MullvadProxyPortStart` or `MullvadProxyPortEnd` value in production!***
@@ -127,7 +130,7 @@ ProxyFilter:                        # Optional: Proxy server filter
     Exclude: ["dus", "ber"]         # Optional: Exclude specific cities (city codes or names)
 ```
 
-### Docker examples 🐳
+### 🐳 Docker examples
 
 This image follows semantic versioning.
 Use specific version tags for reproducibility. Preview tags are not recommended for production.
@@ -146,24 +149,24 @@ Use specific version tags for reproducibility. Preview tags are not recommended 
 > In certain setups, using the `bridge` network mode may lead to performance issues due to the large number of exposed ports.
 > To mitigate this, consider switching to the `host` network mode instead.
 > 
-> **When doing so, ensure that the port configuration in [gateway.yaml](#gateway-config-) is properly adjusted to match your requirements.
+> **When doing so, ensure that the port configuration in [gateway.yaml](#-gateway-config) is properly adjusted to match your requirements.
 > Additionally, ensure that `net.ipv4.conf.all.src_valid_mark=1` is set on the host system (see [example](Examples/src_valid_mark.sh))**.
 
-#### Compose 🧩:
+#### 🧩 Compose:
 
 [Bridge Network](Examples/compose_bridge.yml)
 
 [Host Network](Examples/compose_host.yml)
 
-#### CLI 💻:
+#### 💻 CLI:
 
 [Bridge Network](Examples/cli_bridge.sh)
 
 [Host Network](Examples/cli_host.sh)
 
-## Exports 📤
+## 📤 Exports
 To easily generate importable proxy lists for other applications, the container exports the available Mullvad proxies as CSV and JSON files.
-Since the container does't know the external IP address, the export can't include the proxy IP.
+Since the container doesn't know the external IP address, the export can't include the proxy IP.
 
 📄 CSV example `data/proxies.csv`:
 
