@@ -146,8 +146,8 @@ Use specific version tags for reproducibility. Preview tags are not recommended 
 > In certain setups, using the `bridge` network mode may lead to performance issues due to the large number of exposed ports.
 > To mitigate this, consider switching to the `host` network mode instead.
 > 
-> When doing so, make sure to update the port configuration in `gateway.yaml` accordingly.
-> Additionally, ensure that `net.ipv4.conf.all.src_valid_mark=1` is set on the host system (see [example](Examples/src_valid_mark.sh)).
+> **When doing so, ensure that the port configuration in [gateway.yaml](#gateway-config-) is properly adjusted to match your requirements.
+> Additionally, ensure that `net.ipv4.conf.all.src_valid_mark=1` is set on the host system (see [example](Examples/src_valid_mark.sh))**.
 
 #### Compose 🧩:
 
