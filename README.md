@@ -85,12 +85,12 @@ You may also include configurations for different locations. The first successfu
 ### Gateway config 🤖
 
 > [!IMPORTANT]
-> ***Do not change the `MaxServersPerCity` value in production!***
+> ***Do not change the `MaxServersPerCity`, `MullvadProxyPortStart` or `MullvadProxyPortEnd` value in production!***
 >
-> Modifying this value will shift the assigned container proxy ports.
-> Before starting the container with a modified `MaxServersPerCity` value, 
-> make sure to delete the existing `gost.yaml` file. This ensures consistent 
-> ordering and prevents endpoints from being reassigned incorrectly.
+> Modifying these values will shift the assigned container proxy ports.
+> Before starting the container with modified values make sure to delete 
+> the existing `gost.yaml` file. This ensures consistent ordering and 
+> prevents endpoints from being reassigned incorrectly.
 
 Example `gateway.yaml`:
 ```yaml
@@ -98,7 +98,11 @@ LogLevel: Information               # Logging level (Verbose, Debug, Information
 UpdateServersOnStartup: false       # Always update the proxy server list for GOST on container start, if true
 MaxServersPerCity: 10               # Maximum amount of proxy endpoints per city
 CityRandomPools: true               # Creates 1 proxy per city that randomly selects an exit node within that city (counts as 1 toward `MaxServersPerCity` and includes all available endpoints)
+LocalProxyPort: 1080                # Port number for local proxy
+MullvadProxyPortStart: 2000         # Start port number for dynamic Mullvad proxies
+MullvadProxyPortEnd: 5000           # End port number for dynamic Mullvad proxies
 GostMetricsEnabled: false           # Enable GOST Metrics (Prometheus endpoint) `curl -v -u user:password http://ip:9100/metrics`
+GostMetricsPort: 9100               # Port number for GOST Metrics (Prometheus endpoint)
 Users:                              # List of users with access to the proxy and their permissions
   User1:                            # Name of the user (can be freely chosen)
     Password: Password1             # Password for the user (can be freely chosen)

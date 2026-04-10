@@ -28,10 +28,6 @@ internal class GostProxySync
     internal const string SocksType = "socks5";
     internal const string NetworkProtocol = "tcp";
 
-    internal const int ProxyPortLocal = 1080;
-    internal const int ProxyPortStart = 2000;
-    internal const int ProxyPortEnd = 5000;
-
     internal const int PoolSelectorMaxFails = 1;
     internal const string PoolSelectorFailTimeout = "10s";
     internal const SelectorStrategy PoolSelectorStrategy = SelectorStrategy.round;
@@ -56,7 +52,7 @@ internal class GostProxySync
     {
         var changed = false;
         gostConfig.Services ??= [];
-        var address = $":{ProxyPortLocal}";
+        var address = $":{gatewayConfig.LocalProxyPort}";
         var service = gostConfig.Services.FirstOrDefault(s => string.Equals(s.Name, ServiceLocalName));
         if (service == null)
         {
@@ -64,17 +60,18 @@ internal class GostProxySync
             gostConfig.Services.Add(service);
         }
 
+        var autherGrp = gatewayConfig.HasInternalProxyUser ? GostUserSync.AutherInternalGroup : null;
         if (!string.Equals(service.Addr, address) ||
             !string.Equals(service.Interface, networkInterface) ||
             !string.Equals(service.Listener?.Type, NetworkProtocol) ||
             !string.Equals(service.Handler?.Type, SocksType) ||
-            !string.Equals(service.Handler?.Auther, GostUserSync.AutherInternalGroup))
+            !string.Equals(service.Handler?.Auther, autherGrp))
         {
             Log.Debug($"Updating local proxy configuration `{ServiceLocalName}`");
             service.Addr = address;
             service.Interface = networkInterface;
             service.Listener = new() { Type = NetworkProtocol };
-            service.Handler = new() { Type = SocksType, Auther = GostUserSync.AutherInternalGroup };
+            service.Handler = new() { Type = SocksType, Auther = autherGrp };
             changed = true;
         }
 
@@ -85,7 +82,8 @@ internal class GostProxySync
     {
         if (!gatewayConfig.UpdateServersOnStartup && gostConfig.Services?.Any() == true && gostConfig.Chains?.Any() == true)
         {
-            Log.Information("Skip update of GOST servers");
+            UpdateProxyAuther(gostConfig, gatewayConfig);
+            Log.Information("Skip update of Mullvad servers");
             return false;
         }
 
@@ -163,7 +161,7 @@ internal class GostProxySync
     {
         var cfgChanged = false;
         var startPort = FindPoolAreaPort(gostConfig, gatewayConfig, countryCode, cityCode);
-        if (startPort < ProxyPortStart) return false;
+        if (startPort < gatewayConfig.MullvadProxyPortStart) return false;
         var addPool = gatewayConfig.CityRandomPools;
 
         gostConfig.Services ??= [];
@@ -177,9 +175,9 @@ internal class GostProxySync
             var sericePort = int.Parse(match.Groups["port"].Value);
             var remove = !match.Success || string.IsNullOrWhiteSpace(s.Name) ||
                          (s.Name.StartsWith($"service-{countryCode}-{cityCode}-") &&
-                          sericePort > ProxyPortStart &&   // Ignore internal proxy
-                          sericePort > startPort &&        // Remove area start
-                          sericePort >= startPort + maxServiceAmount);   // Remove area end
+                          sericePort > gatewayConfig.MullvadProxyPortStart &&   // Ignore internal proxy
+                          sericePort > startPort &&                             // Remove area start
+                          sericePort >= startPort + maxServiceAmount);          // Remove area end
             if (remove)
             {
                 Log.Debug($"Removing service `{s.Name}` and its chain `{s.Handler?.Chain}`");
@@ -214,18 +212,19 @@ internal class GostProxySync
 
             service.Handler ??= new();
             service.Listener ??= new();
+            var autherGrp = gatewayConfig.HasMullvadProxyUser ? GostUserSync.AutherMullvadGroup : null;
             if (!string.Equals(service.Name, serviceName) ||
                 !string.Equals(service.Interface, networkInterface) ||
                 !string.Equals(service.Listener.Type, NetworkProtocol) ||
                 !string.Equals(service.Handler.Type, SocksType) ||
-                !string.Equals(service.Handler.Auther, GostUserSync.AutherMullvadGroup))
+                !string.Equals(service.Handler.Auther, autherGrp))
             {
                 Log.Debug($"Update service `{serviceName}`");
                 service.Name = serviceName;
                 service.Interface = networkInterface;
                 service.Listener.Type = NetworkProtocol;
                 service.Handler.Type = SocksType;
-                service.Handler.Auther = GostUserSync.AutherMullvadGroup;
+                service.Handler.Auther = autherGrp;
                 cfgChanged = true;
             }
 
@@ -299,7 +298,7 @@ internal class GostProxySync
 
             }
 
-            hop.Nodes ??= []; 
+            hop.Nodes ??= [];
             if ((!isPool && hop.Nodes.Count > 1) || // Only 1 node should exist for single servers, 
                 (isPool && hop.Nodes.Count > servers.Length)) // clear pool only if more nodes are defined than servers available
             {
@@ -338,7 +337,7 @@ internal class GostProxySync
                     changed = true;
                 }
 
-                if(!isPool || (isPool && nodeIndex == 0))
+                if (!isPool || (isPool && nodeIndex == 0))
                     proxies.Add(new Proxy(isPool ? 0 : i, server, service, chain, hop));
 
                 return changed;
@@ -354,14 +353,42 @@ internal class GostProxySync
         }
 
         if (!cfgChanged) return cfgChanged;
-        gostConfig.Services.Sort((a, b) => a.Addr!.CompareTo(b.Addr));
-        gostConfig.Chains.Sort((a, b) => a.Name!.CompareTo(b.Name));
+        gostConfig.Services.Sort((a, b) => string.Compare(a.Addr!, b.Addr, StringComparison.Ordinal));
+        gostConfig.Chains.Sort((a, b) => string.Compare(a.Name!, b.Name, StringComparison.Ordinal));
+        return cfgChanged;
+    }
+
+    internal static bool UpdateProxyAuther(GostConfig gostConfig, GatewayConfig gatewayConfig)
+    {
+        if (gostConfig.Services == null) return false;
+        var cfgChanged = false;
+        foreach (var service in gostConfig.Services)
+        {
+            if (service.Addr == null || 
+                service.Handler == null ||
+                !AddressPortRegex.IsMatch(service.Addr ?? string.Empty))
+                continue;
+            
+            var port = int.Parse(AddressPortRegex.Match(service.Addr!).Groups["port"].Value);
+            if (port < gatewayConfig.MullvadProxyPortStart || port > gatewayConfig.MullvadProxyPortEnd)
+                continue;
+            
+            var autherGrp = gatewayConfig.HasMullvadProxyUser ? GostUserSync.AutherMullvadGroup : null;
+            if (!string.Equals(service.Handler.Auther, autherGrp))
+            {
+                Log.Debug($"Updating service `{service.Name}` auther group");
+                service.Handler.Auther = autherGrp;
+            }
+        }
+        
         return cfgChanged;
     }
 
     internal static int FindPoolAreaPort(GostConfig gostConfig, GatewayConfig gatewayConfig, string countryCode, string cityCode)
     {
         gostConfig.Services ??= [];
+        var proxyPortStart = gatewayConfig.MullvadProxyPortStart;
+        var proxyPortEnd = gatewayConfig.MullvadProxyPortEnd;
         var proxyPortsPerCity = gatewayConfig.MaxServersPerCity;
         var serviceRegex = new Regex($"^service-{countryCode}-{cityCode}-(\\d+|pool)$", RegexOptions.IgnoreCase);
 
@@ -373,23 +400,23 @@ internal class GostProxySync
         // Get all used ports for dynamic proxies
         var portNumbersUsed = gostConfig.Services.Where(s => AddressPortRegex.IsMatch(s.Addr ?? string.Empty))
             .Select(s => int.Parse(AddressPortRegex.Match(s.Addr!).Groups["port"].Value))
-            .Where(p => p >= ProxyPortStart).ToArray();
+            .Where(p => p >= proxyPortStart).ToArray();
 
         // Use start port if no port is already in use
         if (!portNumbersUsed.Any())
-            return ProxyPortStart;
+            return proxyPortStart;
 
         // Round up to next multiple of proxyPortsPerCity, this way there is a pattern inside the dynamic proxy ports
         var lastUsedPort = portNumbersUsed.Max();
-        var nextPortFree = ProxyPortStart +
-                           ((Math.Max(lastUsedPort, ProxyPortStart - 1) - ProxyPortStart) / proxyPortsPerCity + 1) * proxyPortsPerCity;
+        var nextPortFree = proxyPortStart +
+                           ((Math.Max(lastUsedPort, proxyPortStart - 1) - proxyPortStart) / proxyPortsPerCity + 1) * proxyPortsPerCity;
 
         // Check min/max port limits
-        nextPortFree = Math.Max(nextPortFree, ProxyPortStart);
-        if (nextPortFree + proxyPortsPerCity < ProxyPortEnd)
+        nextPortFree = Math.Max(nextPortFree, proxyPortStart);
+        if (nextPortFree + proxyPortsPerCity < proxyPortEnd)
             return nextPortFree;
 
-        Log.Error($"Unable to find free port `{countryCode}-{cityCode}` since last used port `{nextPortFree + proxyPortsPerCity}` exceeds end of city proxy port area ({ProxyPortStart}-{ProxyPortEnd})");
+        Log.Error($"Unable to find free port `{countryCode}-{cityCode}` since last used port `{nextPortFree + proxyPortsPerCity}` exceeds end of city proxy port area ({proxyPortStart}-{proxyPortEnd})");
         return -1;
     }
 

@@ -45,15 +45,55 @@ public sealed class ConfigTests
         var oldCityRandomPools = cfg.CityRandomPools;
         cfg.MaxServersPerCity = 0;
         cfg.CityRandomPools = false;
-        Assert.IsFalse(cfg.Validate(out error), "MaxServersPerCity must me at least 1");
+        Assert.IsFalse(cfg.Validate(out error), "MaxServersPerCity must be at least 1");
         Assert.IsNotNull(error, "Config validation error message should not be null if MaxServersPerCity is 0");
         cfg.MaxServersPerCity = 0;
         cfg.CityRandomPools = true;
-        Assert.IsFalse(cfg.Validate(out error), "MaxServersPerCity must me at least 1");
+        Assert.IsFalse(cfg.Validate(out error), "MaxServersPerCity must be at least 1");
         Assert.IsNotNull(error, "Config validation error message should not be null if MaxServersPerCity is 0");
         cfg.MaxServersPerCity = oldMaxServersPerCity;
         cfg.CityRandomPools = oldCityRandomPools;
 
+        var oldMullvadStart = cfg.MullvadProxyPortStart;
+        var oldMullvadEnd = cfg.MullvadProxyPortEnd;
+        cfg.MullvadProxyPortStart = oldMullvadEnd;
+        Assert.IsFalse(cfg.Validate(out error), "MullvadProxyPortStart must be smaller than MullvadProxyPortEnd");
+        Assert.IsNotNull(error, "Config validation error message should not be null if MullvadProxyPortStart is not smaller than MullvadProxyPortEnd");
+        cfg.MullvadProxyPortStart = oldMullvadStart;
+        cfg.MullvadProxyPortEnd = oldMullvadStart;
+        Assert.IsFalse(cfg.Validate(out error), "MullvadProxyPortStart must be smaller than MullvadProxyPortEnd");
+        Assert.IsNotNull(error, "Config validation error message should not be null if MullvadProxyPortStart is not smaller than MullvadProxyPortEnd");
+        cfg.MullvadProxyPortStart = oldMullvadStart;
+        cfg.MullvadProxyPortEnd = (ushort)(oldMullvadStart - 1);
+        Assert.IsFalse(cfg.Validate(out error), "MullvadProxyPortStart must be smaller than MullvadProxyPortEnd");
+        Assert.IsNotNull(error, "Config validation error message should not be null if MullvadProxyPortStart is not smaller than MullvadProxyPortEnd");
+        cfg.MullvadProxyPortStart = oldMullvadStart;
+        cfg.MullvadProxyPortEnd = oldMullvadEnd;
+
+        var oldLocalProxyPort = cfg.LocalProxyPort;
+        cfg.LocalProxyPort = (ushort)(oldMullvadStart + 1);
+        Assert.IsFalse(cfg.Validate(out error), "LocalProxyPort must be out of dynamic Mullvad proxy ports");
+        Assert.IsNotNull(error, "Config validation error message should not be null if LocalProxyPort is within dynamic Mullvad proxy ports range");
+        cfg.LocalProxyPort = oldMullvadStart;
+        Assert.IsFalse(cfg.Validate(out error), "LocalProxyPort must be out of dynamic Mullvad proxy ports");
+        Assert.IsNotNull(error, "Config validation error message should not be null if LocalProxyPort is within dynamic Mullvad proxy ports range");
+        cfg.LocalProxyPort = oldMullvadEnd;
+        Assert.IsFalse(cfg.Validate(out error), "LocalProxyPort must be out of dynamic Mullvad proxy ports");
+        Assert.IsNotNull(error, "Config validation error message should not be null if LocalProxyPort is within dynamic Mullvad proxy ports range");
+        cfg.LocalProxyPort = oldLocalProxyPort;
+        
+        var oldGostMetricsPort = cfg.GostMetricsPort;
+        cfg.GostMetricsPort = (ushort)(oldMullvadStart + 1);
+        Assert.IsFalse(cfg.Validate(out error), "GostMetricsPort must be out of dynamic Mullvad proxy ports");
+        Assert.IsNotNull(error, "Config validation error message should not be null if GostMetricsPort is within dynamic Mullvad proxy ports range");
+        cfg.GostMetricsPort = oldMullvadStart;
+        Assert.IsFalse(cfg.Validate(out error), "GostMetricsPort must be out of dynamic Mullvad proxy ports");
+        Assert.IsNotNull(error, "Config validation error message should not be null if GostMetricsPort is within dynamic Mullvad proxy ports range");
+        cfg.GostMetricsPort = oldMullvadEnd;
+        Assert.IsFalse(cfg.Validate(out error), "GostMetricsPort must be out of dynamic Mullvad proxy ports");
+        Assert.IsNotNull(error, "Config validation error message should not be null if GostMetricsPort is within dynamic Mullvad proxy ports range");
+        cfg.GostMetricsPort = oldGostMetricsPort;
+        
         var oldBypasses = cfg.Bypasses;
         cfg.Bypasses = [];
         Assert.IsTrue(cfg.Validate(out error), "Config validation should pass if no bypasses are defined");
@@ -65,8 +105,8 @@ public sealed class ConfigTests
 
         var oldUsers = cfg.Users;
         cfg.Users = [];
-        Assert.IsFalse(cfg.Validate(out error), "Config validation should fail if no users are defined");
-        Assert.IsNotNull(error, "Config validation error message should not be null if no users are defined");
+        Assert.IsTrue(cfg.Validate(out error), "Config is valid if no users are defined");
+        Assert.IsNull(error, "Config validation error message should be null if no users are defined");
         cfg.Users.Add(" ", new());
         Assert.IsFalse(cfg.Validate(out error), "Config validation should fail for user with empty user name");
         Assert.IsNotNull(error, "Config validation error message should not be null for user with empty user name");
@@ -74,6 +114,32 @@ public sealed class ConfigTests
         cfg.Users.Add("User1", new User { Password = string.Empty });
         Assert.IsFalse(cfg.Validate(out error), "Config validation should fail for user with empty user password");
         Assert.IsNotNull(error, "Config validation error message should not be null for user with empty user password");
+        cfg.Users.Clear();
+        var roleUsr = new User { Password = "psw1" };
+        cfg.Users.Add("User1", roleUsr);
+        Assert.IsTrue(cfg.Validate(out error), "Config is valid if no users are defined");
+        Assert.IsNull(error, "Config validation error message should be null if no users are defined");
+        Assert.IsFalse(cfg.HasMullvadProxyUser, "No Mullvad proxy user is defined");
+        Assert.IsFalse(cfg.HasInternalProxyUser, "No internal proxy user is defined");
+        Assert.IsFalse(cfg.HasMetricsAccessUser, "No metrics proxy user is defined");
+        roleUsr.HasMullvadProxyAccess = false;
+        Assert.IsTrue(cfg.HasMullvadProxyUser, "Mullvad proxy user is defined");
+        roleUsr.HasMullvadProxyAccess = true;
+        Assert.IsTrue(cfg.HasMullvadProxyUser, "Mullvad proxy user is defined");
+        roleUsr.HasMullvadProxyAccess = null;
+        Assert.IsFalse(cfg.HasMullvadProxyUser, "No Mullvad proxy user is defined");
+        roleUsr.HasInternalProxyAccess = false;
+        Assert.IsTrue(cfg.HasInternalProxyUser, "Internal proxy user is defined");
+        roleUsr.HasInternalProxyAccess = true;
+        Assert.IsTrue(cfg.HasInternalProxyUser, "Internal proxy user is defined");
+        roleUsr.HasInternalProxyAccess = null;
+        Assert.IsFalse(cfg.HasInternalProxyUser, "No internal proxy user is defined");
+        roleUsr.HasMetricsAccess = false;
+        Assert.IsTrue(cfg.HasMetricsAccessUser, "Internal proxy user is defined");
+        roleUsr.HasMetricsAccess = true;
+        Assert.IsTrue(cfg.HasMetricsAccessUser, "Internal proxy user is defined");
+        roleUsr.HasMetricsAccess = null;
+        Assert.IsFalse(cfg.HasMetricsAccessUser, "No metrics proxy user is defined");
         cfg.Users = oldUsers;
     }
 

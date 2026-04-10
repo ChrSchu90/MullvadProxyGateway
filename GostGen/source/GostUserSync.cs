@@ -51,9 +51,9 @@ internal class GostUserSync
         foreach (var configUser in gatewayConfig.Users)
         {
             var auth = new AuthConfig { Username = configUser.Key, Password = configUser.Value.Password };
-            AddAndUpdateUsers(mullvadGroup, () => configUser.Value.HasMullvadProxyAccess);
-            AddAndUpdateUsers(internalGroup, () => configUser.Value.HasInternalProxyAccess);
-            AddAndUpdateUsers(metricsGroup, () => configUser.Value.HasMetricsAccess);
+            AddAndUpdateUsers(mullvadGroup, () => configUser.Value.HasMullvadProxyAccess == true);
+            AddAndUpdateUsers(internalGroup, () => configUser.Value.HasInternalProxyAccess == true);
+            AddAndUpdateUsers(metricsGroup, () => configUser.Value.HasMetricsAccess == true);
             void AddAndUpdateUsers(AutherConfig group, Func<bool> hasAccess)
             {
                 var groupUser = group.Auths!.FirstOrDefault(u => string.Equals(u.Username, auth.Username));
@@ -74,9 +74,9 @@ internal class GostUserSync
         }
 
         // Remove users that lack auther group role or do not exist anymore
-        RemoveUsers(mullvadGroup, u => u.HasMullvadProxyAccess);
-        RemoveUsers(internalGroup, u => u.HasInternalProxyAccess);
-        RemoveUsers(metricsGroup, u => u.HasMetricsAccess);
+        RemoveUsers(mullvadGroup, u => u.HasMullvadProxyAccess == true);
+        RemoveUsers(internalGroup, u => u.HasInternalProxyAccess == true);
+        RemoveUsers(metricsGroup, u => u.HasMetricsAccess == true);
         void RemoveUsers(AutherConfig group, Func<User, bool> hasAccess)
         {
             foreach (var groupAuth in group.Auths!.ToArray())

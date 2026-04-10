@@ -118,28 +118,28 @@ public class GostProxySyncTests
         {
             // New pool
             var gostConfig = new GostConfig();
-            var gatewayConfig = new GatewayConfig { MaxServersPerCity = maxServerPerCity };
+            var gatewayConfig = new GatewayConfig { MaxServersPerCity = maxServerPerCity, MullvadProxyPortStart = 2222, MullvadProxyPortEnd = 5555 };
 
             var port = GostProxySync.FindPoolAreaPort(gostConfig, gatewayConfig, "al", "tia");
-            var expectedPort = GostProxySync.ProxyPortStart;
+            var expectedPort = gatewayConfig.MullvadProxyPortStart;
             Assert.AreEqual(expectedPort, port, "Empty config should result in area start port");
 
             // Add pool
-            gostConfig = new GostConfig { Services = [new ServiceConfig { Name = "service-al-tia-1", Addr = $":{GostProxySync.ProxyPortStart}" }] };
+            gostConfig = new GostConfig { Services = [new ServiceConfig { Name = "service-al-tia-1", Addr = $":{gatewayConfig.MullvadProxyPortStart}" }] };
             port = GostProxySync.FindPoolAreaPort(gostConfig, gatewayConfig, "ar", "bue");
-            expectedPort = GostProxySync.ProxyPortStart + maxServerPerCity;
+            expectedPort = (ushort)(gatewayConfig.MullvadProxyPortStart + maxServerPerCity);
             Assert.AreEqual(expectedPort, port, "New pool has not been created after existing pool");
 
             // Reuse same pool
             gostConfig = new GostConfig
             {
                 Services = [
-                               new ServiceConfig { Name = "service-al-tia-1", Addr = $":{GostProxySync.ProxyPortStart}"},
-                               new ServiceConfig { Name = "service-ar-bue-1", Addr = $":{GostProxySync.ProxyPortStart + 2 * maxServerPerCity}"}
+                               new ServiceConfig { Name = "service-al-tia-1", Addr = $":{gatewayConfig.MullvadProxyPortStart}"},
+                               new ServiceConfig { Name = "service-ar-bue-1", Addr = $":{gatewayConfig.MullvadProxyPortStart + 2 * maxServerPerCity}"}
                            ]
             };
             port = GostProxySync.FindPoolAreaPort(gostConfig, gatewayConfig, "al", "tia");
-            expectedPort = GostProxySync.ProxyPortStart;
+            expectedPort = gatewayConfig.MullvadProxyPortStart;
             Assert.AreEqual(expectedPort, port, "Same pool does not return previous port");
 
 
@@ -147,25 +147,24 @@ public class GostProxySyncTests
             gostConfig = new GostConfig
             {
                 Services = [
-                               new ServiceConfig { Name = "service-al-tia-1", Addr = $":{GostProxySync.ProxyPortStart}"},
-                               new ServiceConfig { Name = "service-ar-bue-1", Addr = $":{GostProxySync.ProxyPortStart + 4 * maxServerPerCity}"}
+                               new ServiceConfig { Name = "service-al-tia-1", Addr = $":{gatewayConfig.MullvadProxyPortStart}"},
+                               new ServiceConfig { Name = "service-ar-bue-1", Addr = $":{gatewayConfig.MullvadProxyPortStart + 4 * maxServerPerCity}"}
                            ]
             };
             port = GostProxySync.FindPoolAreaPort(gostConfig, gatewayConfig, "au", "adl");
-            expectedPort = GostProxySync.ProxyPortStart + 4 * maxServerPerCity + maxServerPerCity;
+            expectedPort = (ushort)(gatewayConfig.MullvadProxyPortStart + 4 * maxServerPerCity + maxServerPerCity);
             Assert.AreEqual(expectedPort, port, "Pool was not added at the very end");
 
             // Out of area
             gostConfig = new GostConfig
             {
                 Services = [
-                               new ServiceConfig { Name = "service-al-tia-1", Addr = $":{GostProxySync.ProxyPortStart}"},
-                               new ServiceConfig { Name = "service-ar-bue-1", Addr = $":{GostProxySync.ProxyPortEnd - maxServerPerCity}"}
+                               new ServiceConfig { Name = "service-al-tia-1", Addr = $":{gatewayConfig.MullvadProxyPortStart}"},
+                               new ServiceConfig { Name = "service-ar-bue-1", Addr = $":{gatewayConfig.MullvadProxyPortEnd - maxServerPerCity}"}
                            ]
             };
             port = GostProxySync.FindPoolAreaPort(gostConfig, gatewayConfig, "au", "adl");
-            expectedPort = -1;
-            Assert.AreEqual(expectedPort, port, "Pool was added outside of area");
+            Assert.AreEqual(-1, port, "Pool was added outside of area");
         }
     }
 
@@ -286,6 +285,10 @@ public class GostProxySyncTests
 
         changed = await GostProxySync.UpdateLocalProxyAsync(gostCfg, gatewayCfg, "ens0").ConfigureAwait(false);
         Assert.IsTrue(changed, "Local proxy hasn't been updated, but network interface has changed.");
+
+        gatewayCfg.LocalProxyPort = (ushort)(gatewayCfg.LocalProxyPort + 1);
+        changed = await GostProxySync.UpdateLocalProxyAsync(gostCfg, gatewayCfg, "ens0").ConfigureAwait(false);
+        Assert.IsTrue(changed, "Local proxy hasn't been updated, but proxy port has been changed.");
     }
 
     /// <summary>
@@ -347,6 +350,8 @@ public class GostProxySyncTests
         Assert.IsTrue(new FileInfo(GostProxySync.RelayFile).Length > 100, "Failed to save test filled relay json as file");
 
         gatewayCfg = new GatewayConfig { UpdateServersOnStartup = true, CityRandomPools = true, MaxServersPerCity = 10 };
+        var testUser = new User { Password = "test", HasMullvadProxyAccess = true };
+        gatewayCfg.Users.Add("test", testUser);
         gostCfg = new GostConfig();
         changed = await GostProxySync.UpdateMullvadServersAsync(gostCfg, gatewayCfg, "eth0").ConfigureAwait(false);
         Assert.IsTrue(changed, "Proxies must be changed if GOST config was empty");
@@ -442,8 +447,6 @@ public class GostProxySyncTests
         Assert.AreEqual(GostProxySync.SocksType, gostCfg.Chains[2].Hops?[0].Nodes?[1].Connector?.Type);
         Assert.AreEqual(GostProxySync.NetworkProtocol, gostCfg.Chains[2].Hops?[0].Nodes?[1].Dialer?.Type);
 
-
-
         Assert.AreEqual("chain-cob-cib-1", gostCfg.Chains[3].Name);
         Assert.AreEqual(1, gostCfg.Chains[3].Hops?.Count);
         Assert.IsNull(gostCfg.Chains[3].Hops?[0].Selector);
@@ -493,6 +496,16 @@ public class GostProxySyncTests
         Assert.AreEqual("socks-cob-cib-3:123", gostCfg.Chains[6].Hops?[0].Nodes?[2].Addr);
         Assert.AreEqual(GostProxySync.SocksType, gostCfg.Chains[6].Hops?[0].Nodes?[2].Connector?.Type);
         Assert.AreEqual(GostProxySync.NetworkProtocol, gostCfg.Chains[6].Hops?[0].Nodes?[2].Dialer?.Type);
+
+        testUser.HasMullvadProxyAccess = null;
+        changed = await GostProxySync.UpdateMullvadServersAsync(gostCfg, gatewayCfg, "eth0").ConfigureAwait(false);
+        Assert.IsTrue(changed, "Proxies must be changed if no user with role is available");
+        Assert.IsNull(gostCfg.Services[0].Handler?.Auther);
+        
+        testUser.HasMullvadProxyAccess = false;
+        changed = await GostProxySync.UpdateMullvadServersAsync(gostCfg, gatewayCfg, "eth0").ConfigureAwait(false);
+        Assert.IsTrue(changed, "Proxies must be changed user with disabled role has been added");
+        Assert.AreEqual(GostUserSync.AutherMullvadGroup, gostCfg.Services[0].Handler?.Auther);
     }
 
     /// <summary>
