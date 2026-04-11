@@ -51,6 +51,21 @@ internal record GatewayConfig
     /// Gets or sets a value indicating whether a random endpoint pool per city should be created.
     /// </summary>
     public bool CityRandomPools { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets the local proxy port.
+    /// </summary>
+    public ushort LocalProxyPort { get; set; } = 1080;
+
+    /// <summary>
+    /// Gets or sets the dynamic Mullvad proxy port area start.
+    /// </summary>
+    public ushort MullvadProxyPortStart { get; set; } = 2000;
+    
+    /// <summary>
+    /// Gets or sets the dynamic Mullvad proxy port area end.
+    /// </summary>
+    public ushort MullvadProxyPortEnd { get; set; } = 5000;
  
     /// <summary>
     /// Gets or sets a value indicating whether metrics for GOST are enabled.
@@ -58,10 +73,33 @@ internal record GatewayConfig
     public bool GostMetricsEnabled { get; set; }
 
     /// <summary>
+    /// Gets or sets the GOST metrics port.
+    /// </summary>
+    public ushort GostMetricsPort { get; set; } = 9100;
+
+    /// <summary>
     /// Gets or sets the users.
     /// </summary>
     /// <remarks>Defined as dictionary for features that are user specific</remarks>
     public Dictionary<string, User> Users { get; set; } = [];
+
+    /// <summary>
+    /// Gets a value indicating if any of the <see cref="Users"/> has a defined <see cref="User.HasMullvadProxyAccess"/>.
+    /// </summary>
+    [YamlIgnore]
+    public bool HasMullvadProxyUser => Users.Values.Any(u => u.HasMullvadProxyAccess.HasValue);
+    
+    /// <summary>
+    /// Gets a value indicating if any of the <see cref="Users"/> has a defined <see cref="User.HasInternalProxyAccess"/>.
+    /// </summary>
+    [YamlIgnore]
+    public bool HasInternalProxyUser => Users.Values.Any(u => u.HasInternalProxyAccess.HasValue);
+    
+    /// <summary>
+    /// Gets a value indicating if any of the <see cref="Users"/> has a defined <see cref="User.HasMetricsAccess"/>.
+    /// </summary>
+    [YamlIgnore]
+    public bool HasMetricsAccessUser => Users.Values.Any(u => u.HasMetricsAccess.HasValue);
 
     /// <summary>
     /// Gets or sets the bypasses.
@@ -132,21 +170,31 @@ internal record GatewayConfig
     /// Validates the config.
     /// </summary>
     /// <param name="errorMessage">The error message.</param>
-    /// <returns>If the validation was successful or failed</returns>
+    /// <returns>Returns <c>true</c> if the validation was successful or <c>false</c> if failed</returns>
     public bool Validate(out string? errorMessage)
     {
         errorMessage = null;
         if (Bypasses.Count > 0 && Bypasses.Any(string.IsNullOrWhiteSpace))
             errorMessage = "Bypasses cannot contain empty or whitespace entries";
 
-        if (!Users.Any())
-            errorMessage = "At least 1 user has to be defined";
-
         if (Users.Any(u => string.IsNullOrWhiteSpace(u.Key) || Users.Any(p => string.IsNullOrWhiteSpace(p.Value.Password))))
             errorMessage = "Every user requires a username and password";
         
         if(MaxServersPerCity < 1)
             errorMessage = "Maximum amount of servers per city must be at least 1";
+
+        if (MullvadProxyPortStart >= MullvadProxyPortEnd)
+            errorMessage = $"{nameof(MullvadProxyPortStart)} must be smaller than {nameof(MullvadProxyPortEnd)}";
+
+        if (LocalProxyPort == MullvadProxyPortStart || 
+            LocalProxyPort == MullvadProxyPortEnd || 
+            (LocalProxyPort > MullvadProxyPortStart && LocalProxyPort < MullvadProxyPortEnd))
+            errorMessage = "The local proxy port is within the dynamic range of the Mullvad proxies";
+        
+        if (GostMetricsPort == MullvadProxyPortStart || 
+            GostMetricsPort == MullvadProxyPortEnd || 
+            (GostMetricsPort > MullvadProxyPortStart && GostMetricsPort < MullvadProxyPortEnd))
+            errorMessage = "The GOST metrics port is within the dynamic range of the Mullvad proxies";
 
         return errorMessage == null;
     }
@@ -171,17 +219,17 @@ public record User
     /// <summary>
     /// Gets or sets a value indicating whether the user has access to mullvad proxies.
     /// </summary>
-    public bool HasMullvadProxyAccess { get; set; } = true;
+    public bool? HasMullvadProxyAccess { get; set; }
 
     /// <summary>
     /// Gets or sets a value indicating whether the user has access to the internal proxy.
     /// </summary>
-    public bool HasInternalProxyAccess { get; set; }
+    public bool? HasInternalProxyAccess { get; set; }
 
     /// <summary>
     /// Gets or sets a value indicating whether the user has access to the metrics server.
     /// </summary>
-    public bool HasMetricsAccess { get; set; }
+    public bool? HasMetricsAccess { get; set; }
 }
 
 /// <summary>

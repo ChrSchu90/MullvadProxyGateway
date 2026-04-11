@@ -18,7 +18,7 @@ for cfg in $WG_CONFIG_PATTERN; do
   fi
   printf "**** Trying WireGuard config: %s ****\n" "$cfg"
   if wg-quick up "$cfg" >/dev/null; then
-    if curl -fsS --connect-timeout 5 --max-time 5 https://am.i.mullvad.net/json | grep -q '\"mullvad_exit_ip\":true'; then
+    if curl -fsS --connect-timeout 5 --max-time 5 https://am.i.mullvad.net/json | grep -q '"mullvad_exit_ip":true'; then
       WG_STARTED="$cfg"
       printf "**** WireGuard started with: %s ****\n" "$cfg"
       break
@@ -27,7 +27,7 @@ for cfg in $WG_CONFIG_PATTERN; do
     wg-quick down "$cfg" >/dev/null
   else
     printf "**** Failed to start with: %s ****\n" "$cfg"
-  fi
+  fi 
 done
 
 if [ -z "$WG_STARTED" ]; then

@@ -9,7 +9,6 @@ using System.Threading.Tasks;
 /// </summary>
 internal class GostMetricsServerSync
 {
-    internal const int MetricsPort = 9100;
     internal const string MetricsPath = "/metrics";
 
     /// <summary>
@@ -23,16 +22,17 @@ internal class GostMetricsServerSync
         var changed = false;
         if (gatewayConfig.GostMetricsEnabled)
         {
-            var metricsAddress = $":{MetricsPort}";
+            var metricsAddress = $":{gatewayConfig.GostMetricsPort}";
             gostConfig.Metrics ??= new();
+            var autherGrp = gatewayConfig.HasMetricsAccessUser ? GostUserSync.AutherMetricsGroup : null;
             if (gostConfig.Metrics.Addr != metricsAddress ||
                 !string.Equals(gostConfig.Metrics.Path, MetricsPath) ||
-                !string.Equals(gostConfig.Metrics.Auther, GostUserSync.AutherMetricsGroup))
+                !string.Equals(gostConfig.Metrics.Auther, autherGrp))
             {
-                Log.Debug($"Enable metrics server, use `curl -v -u user:passwd http://ip:{MetricsPort}{MetricsPath}` for tests");
+                Log.Debug($"Enable metrics server, use `curl -v -u user:passwd http://ip:{gatewayConfig.GostMetricsPort}{MetricsPath}` for tests");
                 gostConfig.Metrics.Addr = metricsAddress;
                 gostConfig.Metrics.Path = MetricsPath;
-                gostConfig.Metrics.Auther = GostUserSync.AutherMetricsGroup;
+                gostConfig.Metrics.Auther = autherGrp;
                 changed = true;
             }
         }

@@ -8,7 +8,10 @@
 > The name “Mullvad” is solely used to indicate the use and requirement of their services.
 > All trademarks and service names belong to their respective owners.
 
-The **Mullvad Proxy Gateway** transforms a single Mullvad WireGuard connection into a containerized SOCKS5 proxy platform.
+## 🚀 One tunnel. Every Mullvad location.
+
+The **Mullvad Proxy Gateway** transforms a single Mullvad WireGuard connection into a containerized SOCKS5 proxy platform
+with proxies to every Mullvad city worldwide.
 
 Instead of running multiple VPN clients, this container establishes one secure WireGuard tunnel into the Mullvad network 
 and exposes dedicated SOCKS5 endpoints for every available Mullvad city worldwide. Route traffic from any device 
@@ -21,7 +24,7 @@ system traffic continues to use your regular local connection. No full-device VP
 
 <img height="180" src="https://github.com/user-attachments/assets/ec9d8b72-6827-4289-b076-c8b40f50fdd9" />
 
-## Features ✔️
+## ✔️ Features
 
 - ✅ Container healthcheck
 - ✅ Local SOCKS5 proxy
@@ -35,9 +38,9 @@ system traffic continues to use your regular local connection. No full-device VP
 - ✅ [GOST Prometheus Metrics](https://gost.run/en/tutorials/metrics/) (optional)
 - ✅ Multiple WireGuard configurations with connection check on container start
 
-## How it works 🏗️
+## 🏗️ How it works
 
-The container uses `GostGen` to create or update the `gost.yaml` configuration for the [GOST proxy server](https://gost.run/en).
+The container uses [GostGen](./GostGen) to create or update the `gost.yaml` configuration for the [GOST proxy server](https://gost.run/en).
 Because a large number of proxy endpoints is generated, the resulting configuration can become very large (12k+ lines).
 Available servers are fetched from the [Mullvad Relay API](https://api.mullvad.net/www/relays/wireguard) to keep endpoints up to date.
 
@@ -56,16 +59,16 @@ and select the desired target location by using the corresponding city-specific 
 After connecting to the proxy, you can verify the connection by visiting the
 [Mullvad Connection check](https://mullvad.net/en/check) in your browser.
 
-## Setup 🛠️
+## 🛠️ Setup
 
-### Data volume 📁
+### 📁 Data volume
 
 A `data` volume must be mounted to the container.
 The following configuration **files are required to run the container**:
-- [WireGuard configuration(s)](#mullvad-wireguard-config-) (`*.conf`)
-- [Gateway configuration](#gateway-config-) (`gateway.yaml`)
+- [WireGuard configuration(s)](#-mullvad-wireguard-config) (`*.conf`)
+- [Gateway configuration](#-gateway-config) (`gateway.yaml`)
  
-### Mullvad WireGuard config 🔐
+### 🔐 Mullvad WireGuard config
 
 > [!TIP]
 > Use the **nearest available location** for the VPN connection. 
@@ -82,15 +85,22 @@ so name them accordingly (e.g., 01-de-fra.conf, 02-de-fra.conf, 03-de-fra.conf, 
 
 You may also include configurations for different locations. The first successfully working configuration will be used.
 
-### Gateway config 🤖
+```
+data/
+  01-de-fra.conf
+  02-de-fra.conf
+  03-de-fra.conf
+```
+
+### 🤖 Gateway config
 
 > [!IMPORTANT]
-> ***Do not change the `MaxServersPerCity` value in production!***
+> ***Do not change the `MaxServersPerCity`, `MullvadProxyPortStart` or `MullvadProxyPortEnd` value in production!***
 >
-> Modifying this value will shift the assigned container proxy ports.
-> Before starting the container with a modified `MaxServersPerCity` value, 
-> make sure to delete the existing `gost.yaml` file. This ensures consistent 
-> ordering and prevents endpoints from being reassigned incorrectly.
+> Modifying these values will shift the assigned container proxy ports.
+> Before starting the container with modified values make sure to delete 
+> the existing `gost.yaml` file. This ensures consistent ordering and 
+> prevents endpoints from being reassigned incorrectly.
 
 Example `gateway.yaml`:
 ```yaml
@@ -98,13 +108,17 @@ LogLevel: Information               # Logging level (Verbose, Debug, Information
 UpdateServersOnStartup: false       # Always update the proxy server list for GOST on container start, if true
 MaxServersPerCity: 10               # Maximum amount of proxy endpoints per city
 CityRandomPools: true               # Creates 1 proxy per city that randomly selects an exit node within that city (counts as 1 toward `MaxServersPerCity` and includes all available endpoints)
-GostMetricsEnabled: false           # Enable GOST Metrics (Prometheus endpoint) `curl -v -u user:password http://ip:9100/metrics`
-Users:                              # List of users with access to the proxy and their permissions
-  User1:                            # Name of the user (can be freely chosen)
-    Password: Password1             # Password for the user (can be freely chosen)
-    HasMullvadProxyAccess: true     # Access to the Mullvad proxies
-    HasInternalProxyAccess: false   # Access to the local proxy
-    HasMetricsAccess: false         # Access to the GOST metrics
+LocalProxyPort: 1080                # Port number for local proxy
+MullvadProxyPortStart: 2000         # Start port number for dynamic Mullvad proxies
+MullvadProxyPortEnd: 5000           # End port number for dynamic Mullvad proxies
+GostMetricsEnabled: false           # Optional: Enable GOST Metrics (Prometheus endpoint) `curl -v -u user:password http://ip:9100/metrics`
+GostMetricsPort: 9100               # Optional: Port number for GOST Metrics (Prometheus endpoint)
+Users:                              # Optional: List of users with access to the proxy and their permissions
+  User1:                            # Optional: Name of the user (can be freely chosen)
+    Password: Password1             # Optional: Password for the user (can be freely chosen)
+    HasMullvadProxyAccess: true     # Optional: Access to the Mullvad proxies
+    HasInternalProxyAccess: false   # Optional: Access to the local proxy
+    HasMetricsAccess: false         # Optional: Access to the GOST metrics
   User2:
     Password: Password2
     HasMullvadProxyAccess: true
@@ -123,7 +137,7 @@ ProxyFilter:                        # Optional: Proxy server filter
     Exclude: ["dus", "ber"]         # Optional: Exclude specific cities (city codes or names)
 ```
 
-### Docker examples 🐳
+### 🐳 Docker examples
 
 This image follows semantic versioning.
 Use specific version tags for reproducibility. Preview tags are not recommended for production.
@@ -138,7 +152,14 @@ Use specific version tags for reproducibility. Preview tags are not recommended 
 - `1.2.3-preview` – Latest preview for patch version `1.2.3`
 - `1.2.3-beta.1` – Specific preview build (fully pinned)
 
-#### Compose 🧩:
+> [!TIP]
+> In certain setups, using the `bridge` network can cause performance 
+> degradation on container start/stop due to the large number of exposed ports.
+> 
+> To avoid this, limit the exposed ports to the required range, or consider
+> using an `ipvlan` or `macvlan` network to assign a dedicated IP address to the container.
+
+#### 🧩 Compose:
 
 ```yaml
 services:
@@ -149,7 +170,7 @@ services:
     ports:
       - "1080:1080"             # Local proxy
       - "9100:9100"             # Prometheus Metrics (optional)
-      - "2000-5000:2000-5000"   # Dynamic Mullvad proxies (amount of used ports depends on config)
+      - "2000-3000:2000-3000"   # Dynamic Mullvad proxies (amount of used ports depends on config)
     volumes:
       - mullvad-proxy-gateway_data:/data
     cap_add:
@@ -163,16 +184,16 @@ volumes:
     name: mullvad-proxy-gateway_data
 ```
 
-#### CLI 💻:
+#### 💻 CLI:
 
-```bash
+```
 docker volume create mullvad-proxy-gateway_data && \
 docker run -d \
   --name mullvad-proxy-gateway \
   --restart unless-stopped \
   -p 1080:1080 \
   -p 9100:9100 \
-  -p 2000-5000:2000-5000 \
+  -p 2000-3000:2000-3000 \
   -v mullvad-proxy-gateway_data:/data \
   --cap-add=NET_ADMIN \
   --sysctl net.ipv4.conf.all.src_valid_mark=1 \
@@ -180,9 +201,9 @@ docker run -d \
   ghcr.io/chrschu90/mullvad-proxy-gateway:1
 ```
 
-## Exports 📤
+## 📤 Exports
 To easily generate importable proxy lists for other applications, the container exports the available Mullvad proxies as CSV and JSON files.
-Since the container does't know the external IP address, the export can't include the proxy IP.
+Since the container doesn't know the external IP address, the export can't include the proxy IP.
 
 📄 CSV example `data/proxies.csv`:
 

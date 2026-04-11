@@ -29,10 +29,5 @@ COPY --chmod=755 GostGen/publish/${TARGETOS}/${TARGETARCH}${TARGETVARIANT} .
 HEALTHCHECK --interval=30s --timeout=30s --retries=5 --start-period=30s CMD \
   sh -c "curl -fs https://am.i.mullvad.net/json | grep -q '\"mullvad_exit_ip\":true'"
 
-# TCP 1080 = local proxy
-# TCP 9100 = GOST Prometheus Metrics
-# TCP 2000-5000 = Mullvad proxies Cities + Pools (amount of used ports is dynamic and depends on config)
-EXPOSE 1080 9100 2000-5000
-
 VOLUME ["/data"]
 CMD [ "/run.sh" ]
