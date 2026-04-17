@@ -190,7 +190,7 @@ jobs:
         exit 1
 
     - name: Create Release
-      uses: softprops/action-gh-release@v2
+      uses: softprops/action-gh-release@v3
       if: ${{ steps.tagver.outputs.is_valid == 'true' }}
       with:        
         tag_name: ${{ steps.tagver.outputs.version_tag }}
