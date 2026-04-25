@@ -17,7 +17,7 @@ RUN apk add --no-cache curl grep \
 # Download and add GOST binary (https://github.com/go-gost/gost) for socks5 proxy server
 RUN apk add --no-cache --virtual .fetch-deps wget tar && \
     wget -qO /tmp/gost.tar.gz "https://github.com/go-gost/gost/releases/download/v${GOST_VERSION}/gost_${GOST_VERSION}_${TARGETOS}_${TARGETARCH}${TARGETVARIANT}.tar.gz" && \
-    tar -xzf /tmp/gost.tar.gz -C / && \
+    tar -xzf /tmp/gost.tar.gz -C / gost && \
     chmod a+x /gost && \
     apk del .fetch-deps && \
     rm -rf /tmp/* /var/tmp/* /var/cache/distfiles/*
