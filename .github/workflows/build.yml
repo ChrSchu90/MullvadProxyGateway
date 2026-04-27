@@ -196,3 +196,4 @@ jobs:
         tag_name: ${{ steps.tagver.outputs.version_tag }}
         prerelease: ${{ steps.tagver.outputs.is_prerelease == 'true' }}
         make_latest: ${{ steps.tagver.outputs.is_release == 'true' }}
+        generate_release_notes: true
