@@ -137,6 +137,14 @@ ProxyFilter:                        # Optional: Proxy server filter
     Exclude: ["dus", "ber"]         # Optional: Exclude specific cities (city codes or names)
 ```
 
+```
+data/
+  01-de-fra.conf
+  02-de-fra.conf
+  03-de-fra.conf
+  gateway.yaml
+```
+
 ### 🐳 Docker examples
 
 This image follows semantic versioning.
