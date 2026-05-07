@@ -12,8 +12,8 @@
     </Folder>
     <Folder Name="/Solution Items/">
         <File Path="../.gitignore" />
+        <File Path="../global.json" />
         <File Path="Directory.Build.props" />
-        <File Path="global.json" />
     </Folder>
     <Project Path="source/GostGen.csproj" />
     <Project Path="tests/GostGen.Tests.csproj" />
