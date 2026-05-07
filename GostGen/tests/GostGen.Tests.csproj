@@ -2,8 +2,6 @@
 
 	<PropertyGroup>
 		<IsTestProject>true</IsTestProject>
-		<UseMicrosoftTestingPlatform>true</UseMicrosoftTestingPlatform>
-		<OutputType>Exe</OutputType>
 	</PropertyGroup>
 
 	<ItemGroup>

@@ -14,6 +14,12 @@
         <Nullable>enable</Nullable>
         <LangVersion>14.0</LangVersion>
     </PropertyGroup>
+	
+    <!-- Test project configuration -->
+	<PropertyGroup Condition="'$(IsTestProject)' == 'true'">
+		<UseMicrosoftTestingPlatform>true</UseMicrosoftTestingPlatform>
+		<OutputType>Exe</OutputType>
+	</PropertyGroup>
 
     <!-- Make internals visible to related test project -->
     <ItemGroup Condition="'$(IsTestProject)' != 'true'">
