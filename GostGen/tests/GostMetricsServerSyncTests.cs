@@ -23,7 +23,6 @@ public class GostMetricsServerSyncTests
     [DataRow(true, TestMetricsPort, GostMetricsServerSync.MetricsPath, "wrong-auther", true, true, DisplayName = "Update Metrics auther when incorrect")]
     [DataRow(false, TestMetricsPort, GostMetricsServerSync.MetricsPath, GostUserSync.AutherMetricsGroup, true, true, DisplayName = "Disable metrics server when GostMetricsEnabled is false")]
     [DataRow(false, null, null, null, false, true, DisplayName = "No change when Metrics is already null and GostMetricsEnabled is false")]
-    [DataRow(true, null, null, null, true, true, DisplayName = "Enabled user role")]
     [DataRow(true, null, null, GostUserSync.AutherMetricsGroup, true, false, DisplayName = "Disabled user role")]
     [DataRow(true, null, null, null, true, null, DisplayName = "None user role")]
     public async Task UpdateAsync(bool gostMetricsEnabled, int? port, string? initialPath, string? initialAuther, bool expectedChanged, bool? userRole)

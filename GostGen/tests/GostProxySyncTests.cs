@@ -29,7 +29,7 @@ public class GostProxySyncTests
         if (File.Exists(GostProxySync.RelayFile)) File.Delete(GostProxySync.RelayFile);
         var relays = await GostProxySync.GetMullvadRelaysAsync().ConfigureAwait(false);
         Assert.IsNotNull(relays, $"Failed to get relays from Mullvad API {GostProxySync.RelayApiUrl}");
-        Assert.IsTrue(relays.Any(), $"API {GostProxySync.RelayApiUrl} retuned empty list.");
+        Assert.IsNotEmpty(relays, $"API {GostProxySync.RelayApiUrl} retuned empty list.");
     }
 
     /// <summary>
@@ -47,7 +47,7 @@ public class GostProxySyncTests
 
         var relays = await GostProxySync.GetMullvadRelaysAsync().ConfigureAwait(false);
         Assert.IsNotNull(relays, $"Failed to get relays from test file `{GostProxySync.RelayFile}`");
-        Assert.AreEqual(582, relays.Count, "Amount of relays does not match with the test file");
+        Assert.HasCount(582, relays, "Amount of relays does not match with the test file");
     }
 
     /// <summary>
@@ -58,7 +58,7 @@ public class GostProxySyncTests
     {
         var relays = (await GetMullvadRelaysAsync().ConfigureAwait(false))?.ToList();
         Assert.IsNotNull(relays, "Failed to get test relays");
-        Assert.AreEqual(582, relays.Count, "Test relays amount does not match");
+        Assert.HasCount(582, relays, "Test relays amount does not match");
 
         var config = new GatewayConfig { ProxyFilter = new() };
 
@@ -66,46 +66,46 @@ public class GostProxySyncTests
         var nullRelay = new MullvadRelay();
         relays.Add(nullRelay);
         var filtered = GostProxySync.ApplyProxyFilter(relays, config);
-        Assert.AreEqual(relays.Count - 1, filtered.Count, "Relay with NULL data has not been filtered");
+        Assert.HasCount(relays.Count - 1, filtered, "Relay with NULL data has not been filtered");
         Assert.IsTrue(relays.Remove(nullRelay), "Failed to remove NULL data relay from test data");
 
         // No filter
         filtered = GostProxySync.ApplyProxyFilter(relays, config);
-        Assert.AreEqual(relays.Count, filtered.Count, "Missing relays with empty filter configuration");
+        Assert.HasCount(relays.Count, filtered, "Missing relays with empty filter configuration");
 
         // Only owned servers
         config = new GatewayConfig { ProxyFilter = new() { OwnedOnly = true } };
         filtered = GostProxySync.ApplyProxyFilter(relays, config);
         var expectedCnt = relays.Count(r => r.Owned);
-        Assert.AreEqual(expectedCnt, filtered.Count, "Filter result for owned does not match");
+        Assert.HasCount(expectedCnt, filtered, "Filter result for owned does not match");
 
         // County Include filter
         config = new GatewayConfig { ProxyFilter = new() { Country = { Include = ["DE", "switzerland"] } } };
         filtered = GostProxySync.ApplyProxyFilter(relays, config);
         expectedCnt = relays.Count(r => string.Equals(r.CountryCode, "de", StringComparison.OrdinalIgnoreCase) ||
                                         string.Equals(r.CountryName, "Switzerland", StringComparison.OrdinalIgnoreCase));
-        Assert.AreEqual(expectedCnt, filtered.Count, "Filter result for county include does not match");
+        Assert.HasCount(expectedCnt, filtered, "Filter result for county include does not match");
 
         // County Exclude filter
         config = new GatewayConfig { ProxyFilter = new() { Country = { Exclude = ["DE", "switzerland"] } } };
         filtered = GostProxySync.ApplyProxyFilter(relays, config);
         expectedCnt = relays.Count(r => !string.Equals(r.CountryCode, "de", StringComparison.OrdinalIgnoreCase) &&
                                         !string.Equals(r.CountryName, "Switzerland", StringComparison.OrdinalIgnoreCase));
-        Assert.AreEqual(expectedCnt, filtered.Count, "Filter result for county include does not match");
+        Assert.HasCount(expectedCnt, filtered, "Filter result for county include does not match");
 
         // City Include filter
         config = new GatewayConfig { ProxyFilter = new() { City = { Include = ["FRA", "zurich"] } } };
         filtered = GostProxySync.ApplyProxyFilter(relays, config);
         expectedCnt = relays.Count(r => string.Equals(r.CityCode, "fra", StringComparison.OrdinalIgnoreCase) ||
                                         string.Equals(r.CityName, "Zurich", StringComparison.OrdinalIgnoreCase));
-        Assert.AreEqual(expectedCnt, filtered.Count, "Filter result for county include does not match");
+        Assert.HasCount(expectedCnt, filtered, "Filter result for county include does not match");
 
         // City Exclude filter
         config = new GatewayConfig { ProxyFilter = new() { City = { Exclude = ["FRA", "zurich"] } } };
         filtered = GostProxySync.ApplyProxyFilter(relays, config);
         expectedCnt = relays.Count(r => !string.Equals(r.CityCode, "fra", StringComparison.OrdinalIgnoreCase) &&
                                         !string.Equals(r.CityName, "Zurich", StringComparison.OrdinalIgnoreCase));
-        Assert.AreEqual(expectedCnt, filtered.Count, "Filter result for county include does not match");
+        Assert.HasCount(expectedCnt, filtered, "Filter result for county include does not match");
     }
 
     /// <summary>
@@ -200,10 +200,10 @@ public class GostProxySyncTests
         Assert.IsFalse(string.IsNullOrWhiteSpace(csvContent), "Export .csv has no content");
 
         var lines = csvContent.Split('\n', StringSplitOptions.RemoveEmptyEntries);
-        Assert.AreEqual(2, lines.Length, "CSV should contain header + 1 data row");
+        Assert.HasCount(2, lines, "CSV should contain header + 1 data row");
 
         var headers = lines[0].Split(',');
-        Assert.AreEqual(8, headers.Length);
+        Assert.HasCount(8, headers);
         Assert.AreEqual("Country", headers[0]);
         Assert.AreEqual("Country Code", headers[1]);
         Assert.AreEqual("City", headers[2]);
@@ -214,7 +214,7 @@ public class GostProxySyncTests
         Assert.AreEqual("Target", headers[7]);
 
         var values = lines[1].Split(',');
-        Assert.AreEqual(headers.Length, values.Length);
+        Assert.HasCount(headers.Length, values);
         Assert.AreEqual("\"Germany\"", values[0]);
         Assert.AreEqual("de", values[1]);
         Assert.AreEqual("\"Frankfurt\"", values[2]);
@@ -301,7 +301,7 @@ public class GostProxySyncTests
         var relayJson = (await GetMullvadRelaysAsync().ConfigureAwait(false))?.ToList();
         Assert.IsNotNull(relayJson, "Failed to load test json from resources");
         await File.WriteAllTextAsync(GostProxySync.RelayFile, JsonSerializer.Serialize(relayJson)).ConfigureAwait(false);
-        Assert.IsTrue(new FileInfo(GostProxySync.RelayFile).Length > 100, "Failed to save test filled relay json as file");
+        Assert.IsGreaterThan(100, new FileInfo(GostProxySync.RelayFile).Length, "Failed to save test filled relay json as file");
 
         var gatewayPoolCfg = new GatewayConfig { UpdateServersOnStartup = true, CityRandomPools = true, MaxServersPerCity = 10 };
         var gatewayWithoutPoolCfg = new GatewayConfig { UpdateServersOnStartup = true, CityRandomPools = false, MaxServersPerCity = 10 };
@@ -347,7 +347,7 @@ public class GostProxySyncTests
                                  new() { CountryName  = "CountryB", CountryCode = "cob", CityName = "CityB", CityCode = "cib", Hostname = "cob-cib-3", SocksName ="socks-cob-cib-3", SocksPort = 123}
                              };
         await File.WriteAllTextAsync(GostProxySync.RelayFile, JsonSerializer.Serialize(testRelays)).ConfigureAwait(false);
-        Assert.IsTrue(new FileInfo(GostProxySync.RelayFile).Length > 100, "Failed to save test filled relay json as file");
+        Assert.IsGreaterThan(100, new FileInfo(GostProxySync.RelayFile).Length, "Failed to save test filled relay json as file");
 
         gatewayCfg = new GatewayConfig { UpdateServersOnStartup = true, CityRandomPools = true, MaxServersPerCity = 10 };
         var testUser = new User { Password = "test", HasMullvadProxyAccess = true };
@@ -357,9 +357,9 @@ public class GostProxySyncTests
         Assert.IsTrue(changed, "Proxies must be changed if GOST config was empty");
         Assert.IsNotNull(gostCfg.Services);
         Assert.IsNotNull(gostCfg.Chains);
-        Assert.AreEqual(7, gostCfg.Services.Count, "Unexpected amount of services");
-        Assert.AreEqual(7, gostCfg.Chains.Count, "Unexpected amount of chains");
-        Assert.AreEqual(gostCfg.Services.Count, gostCfg.Chains.Count, "Amount of chains and services must be the same");
+        Assert.HasCount(7, gostCfg.Services, "Unexpected amount of services");
+        Assert.HasCount(7, gostCfg.Chains, "Unexpected amount of chains");
+        Assert.HasCount(gostCfg.Services.Count, gostCfg.Chains, "Amount of chains and services must be the same");
 
         Assert.AreEqual("service-coa-cia-pool", gostCfg.Services[0].Name);
         Assert.AreEqual("eth0", gostCfg.Services[0].Interface);
@@ -526,7 +526,7 @@ public class GostProxySyncTests
         var relayJson = (await GetMullvadRelaysAsync().ConfigureAwait(false))?.ToList();
         Assert.IsNotNull(relayJson, "Failed to load test json from resources");
         await File.WriteAllTextAsync(GostProxySync.RelayFile, JsonSerializer.Serialize(relayJson)).ConfigureAwait(false);
-        Assert.IsTrue(new FileInfo(GostProxySync.RelayFile).Length > 100, "Failed to save test filled relay json as file");
+        Assert.IsGreaterThan(100, new FileInfo(GostProxySync.RelayFile).Length, "Failed to save test filled relay json as file");
         changed = await GostProxySync.UpdateMullvadServersAsync(gostCfg, gatewayCfg, "eth0").ConfigureAwait(false);
         Assert.IsTrue(changed, "Proxies must be changed if GOST config was empty");
 
@@ -584,6 +584,7 @@ public class GostProxySyncTests
         try
         {
             using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+            // ReSharper disable once ShortLivedHttpClient
             using var httpClient = new HttpClient();
             var response = await httpClient.GetAsync(GostProxySync.RelayApiUrl, cts.Token).ConfigureAwait(false);
             return response.IsSuccessStatusCode;

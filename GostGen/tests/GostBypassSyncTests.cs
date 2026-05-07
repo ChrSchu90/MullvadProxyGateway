@@ -31,7 +31,7 @@ public class GostBypassSyncTests
         var gostConfig = new GostConfig();
         var gatewayConfig = new GatewayConfig { Bypasses = ["test"] };
         var result = await GostBypassSync.UpdateAsync(gostConfig, gatewayConfig);
-        Assert.AreEqual(true, result, "Bypass config change detection failed");
+        Assert.IsTrue(result, "Bypass config change detection failed");
         
         foreach (var testCase in testCases)
         {
@@ -43,7 +43,7 @@ public class GostBypassSyncTests
             
             gatewayConfig.Bypasses.Add("something.else.to.trigger.update");
             result = await GostBypassSync.UpdateAsync(gostConfig, gatewayConfig);
-            Assert.AreEqual(true, result, "Bypass config change detection failed");
+            Assert.IsTrue(result, "Bypass config change detection failed");
         }
     }
 }
