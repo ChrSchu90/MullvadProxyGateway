@@ -58,7 +58,7 @@ jobs:
       run: dotnet build ${{ env.NET_SOLUTION }} --verbosity normal --no-restore --configuration Release
 
     - name: .NET Test
-      run: dotnet test ${{ env.NET_SOLUTION }} --verbosity normal --no-restore --configuration Release
+      run: dotnet test --solution ${{ env.NET_SOLUTION }} --verbosity normal --no-restore --configuration Release
 
     - name: .NET Publish amd64
       run: |
