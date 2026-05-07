@@ -135,6 +135,7 @@ internal class GostProxySync
             try
             {
                 Log.Information($"Downloading Mullvad relays from {RelayApiUrl}");
+                // ReSharper disable once ShortLivedHttpClient
                 using var httpClient = new HttpClient();
                 var json = await httpClient.GetStringAsync(RelayApiUrl).ConfigureAwait(false);
                 relays = JsonSerializer.Deserialize<List<MullvadRelay>>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });

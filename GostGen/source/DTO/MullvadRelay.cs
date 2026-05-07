@@ -3,6 +3,7 @@
 
 namespace GostGen.DTO;
 
+using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
@@ -56,7 +57,7 @@ internal record MullvadRelay
     public string? Type { get; init; }
 
     [JsonPropertyName("status_messages")]
-    public List<string>? StatusMessages { get; init; }
+    public List<StatusMessage>? StatusMessages { get; init; } = [];
 
     [JsonPropertyName("pubkey")]
     public string? Pubkey { get; init; }
@@ -72,4 +73,13 @@ internal record MullvadRelay
 
     [JsonPropertyName("daita")]
     public bool Daita { get; init; }
+}
+
+public record StatusMessage
+{
+    [JsonPropertyName("message")]
+    public string Message { get; init; } = null!;
+
+    [JsonPropertyName("timestamp")]
+    public DateTimeOffset Timestamp { get; init; }
 }
