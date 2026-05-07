@@ -1,17 +1,18 @@
-<Project Sdk="MSTest.Sdk/4.2.2">
+﻿<Project Sdk="MSTest.Sdk/4.2.2">
 
-  <PropertyGroup>
-    <IsTestProject>true</IsTestProject>
-  </PropertyGroup>
+	<PropertyGroup>
+		<IsTestProject>true</IsTestProject>
+		<OutputType>Exe</OutputType>
+	</PropertyGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\source\GostGen.csproj" />
-    <PackageReference Update="Microsoft.Testing.Extensions.CodeCoverage" Version="18.6.2" />
-    <PackageReference Update="Microsoft.Testing.Extensions.TrxReport" Version="2.0.2" />
-  </ItemGroup>
+	<ItemGroup>
+		<ProjectReference Include="..\source\GostGen.csproj" />
+		<PackageReference Update="Microsoft.Testing.Extensions.CodeCoverage" Version="18.6.2" />
+		<PackageReference Update="Microsoft.Testing.Extensions.TrxReport" Version="2.0.2" />
+	</ItemGroup>
 
-  <ItemGroup>
-    <EmbeddedResource Include="TestData\mullvad.json" />
-  </ItemGroup>
+	<ItemGroup>
+		<EmbeddedResource Include="TestData\mullvad.json" />
+	</ItemGroup>
 
 </Project>
