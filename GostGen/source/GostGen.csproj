@@ -6,7 +6,7 @@
 
   <ItemGroup>
     <PackageReference Include="Serilog.Sinks.Console" Version="6.1.1" />
-    <PackageReference Include="YamlDotNet" Version="17.1.0" />
+    <PackageReference Include="YamlDotNet" Version="18.0.0" />
   </ItemGroup>
 
 </Project>
