@@ -2,12 +2,12 @@
 
 cd "$(dirname "$0")" || exit
 
-DOCKER_FILE="Dockerfile"
-IMAGE_NAME="mullvad-proxy-gateway:dev"
+DOCKER_FILE=Dockerfile
+IMAGE_NAME=mullvad-proxy-gateway:dev
 NET_PROJECT=./GostGen/source/GostGen.csproj
 NET_BUILD_ARGS="-p:DebugType=embedded -p:PublishSingleFile=true -p:Version=0.0.1 --verbosity normal --configuration Release --self-contained"
 DOCKER_PLATFORM=linux/amd64 # linux/amd64 linux/arm64/v8 linux/arm/v7
-GOST_VERSION="3.2.6"
+GOST_VERSION=3.2.6
 
 dotnet publish ${NET_PROJECT} -r linux-musl-x64 ${NET_BUILD_ARGS} -o ./GostGen/publish/linux/amd64 && \
   dotnet publish ${NET_PROJECT} -r linux-musl-arm64 ${NET_BUILD_ARGS} -o ./GostGen/publish/linux/arm64 && \
