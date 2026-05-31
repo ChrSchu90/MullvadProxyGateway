@@ -1,0 +1,64 @@
+name: Check Upstream Releases
+
+# Required Repo Setting!!! Settings → Actions → General → Workflow permissions [`Allow GitHub Actions to create and approve pull requests`]
+
+on:
+  schedule:
+    - cron: '0 10 * * 5' # Every Friday at 10:00 UTC
+  workflow_dispatch:
+
+concurrency:
+  group: check-upstream-releases
+  cancel-in-progress: true
+
+jobs:
+  check:
+    if: ${{ github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      contents: write
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v6
+    
+    - name: Get Upstream Version Info
+      id: versions
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        set -euo pipefail
+        
+        gost_current="$(sed -n -E 's/^ARG GOST_VERSION=//p' Dockerfile | head -n1)"
+        echo "gost_current=$gost_current" >> "$GITHUB_OUTPUT"
+        echo "::notice::[info] gost_current=$gost_current"
+        gost_latest="$(gh release view --repo go-gost/gost --json tagName --jq '.tagName' | sed 's/^v//')"
+        echo "gost_latest=$gost_latest" >> "$GITHUB_OUTPUT"
+        echo "::notice::[info] gost_latest=$gost_latest"
+        [[ "$gost_current" != "$gost_latest" ]] && gost_changed=true || gost_changed=false
+        echo "gost_changed=$gost_changed" >> "$GITHUB_OUTPUT"
+        echo "::notice::[info] gost_changed=$gost_changed"
+        
+        [[ "$gost_changed" == "true" ]] && update_available=true || update_available=false
+        echo "update_available=$update_available" >> "$GITHUB_OUTPUT"
+        echo "::notice::[info] update_available=$update_available"
+
+    - name: Update Upstream Versions
+      if: ${{ steps.versions.outputs.update_available == 'true' }}
+      run: |
+        set -euo pipefail
+        
+        sed -i -E 's/^(ARG GOST_VERSION=).*/\1${{ steps.versions.outputs.gost_latest }}/' Dockerfile
+        sed -i -E 's/^(GOST_VERSION=).*/\1${{ steps.versions.outputs.gost_latest }}/' debug.sh
+    
+    - name: Create Pull Request
+      if: ${{ steps.versions.outputs.update_available == 'true' }}
+      uses: peter-evans/create-pull-request@v8
+      with:
+        branch: feature/UpstreamReleaseUpdate
+        delete-branch: true
+        title: "Update Upstream Releases"
+        commit-message: "Update upstream release"
+        body: |
+          Updated upstream release versions:  
+          - GOST: `${{ steps.versions.outputs.gost_current }}` to `${{ steps.versions.outputs.gost_latest }}`
