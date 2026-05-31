@@ -9,7 +9,7 @@
     <Folder Name="/GitHub/">
         <File Path="../.github/dependabot.yml" />
         <File Path="../.github/workflows/build.yml" />
-        <File Path="../.github/workflows/check-upstream-releases.yml" />
+        <File Path="../.github/workflows/update-upstream-deps.yml" />
     </Folder>
     <Folder Name="/Solution Items/">
         <File Path="../.gitignore" />

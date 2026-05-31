@@ -1,4 +1,4 @@
-name: Check Upstream Releases
+name: Update Upstream Dependencies
 
 # Required Repo Setting!!! Settings → Actions → General → Workflow permissions [`Allow GitHub Actions to create and approve pull requests`]
 
@@ -8,11 +8,11 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: check-upstream-releases
+  group: update-upstream-deps
   cancel-in-progress: true
 
 jobs:
-  check:
+  update:
     if: ${{ github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-latest
     permissions:
@@ -22,7 +22,7 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v6
     
-    - name: Get Upstream Version Info
+    - name: Get Dependency Version Info
       id: versions
       env:
         GH_TOKEN: ${{ github.token }}
@@ -43,7 +43,7 @@ jobs:
         echo "update_available=$update_available" >> "$GITHUB_OUTPUT"
         echo "::notice::[info] update_available=$update_available"
 
-    - name: Update Upstream Versions
+    - name: Update Dependency Versions
       if: ${{ steps.versions.outputs.update_available == 'true' }}
       run: |
         set -euo pipefail
@@ -55,10 +55,10 @@ jobs:
       if: ${{ steps.versions.outputs.update_available == 'true' }}
       uses: peter-evans/create-pull-request@v8
       with:
-        branch: feature/UpstreamReleaseUpdate
+        branch: feature/UpstreamDependencyUpdate
         delete-branch: true
-        title: "Update Upstream Releases"
-        commit-message: "Update upstream release"
+        title: "Update Upstream Dependencies"
+        commit-message: "Update Upstream Dependencies"
         body: |
-          Updated upstream release versions:  
+          Updated upstream dependency:
           - GOST: `${{ steps.versions.outputs.gost_current }}` to `${{ steps.versions.outputs.gost_latest }}`
