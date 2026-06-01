@@ -1,6 +1,4 @@
-# Mullvad Proxy Gateway
-
-[![Build](https://github.com/ChrSchu90/MullvadProxyGateway/actions/workflows/build.yml/badge.svg)](https://github.com/ChrSchu90/MullvadProxyGateway/actions/workflows/build.yml)
+# Mullvad Proxy Gateway [![Build](https://github.com/ChrSchu90/MullvadProxyGateway/actions/workflows/build.yml/badge.svg)](https://github.com/ChrSchu90/MullvadProxyGateway/actions/workflows/build.yml)
 
 > [!NOTE]
 > This is **not an official Mullvad project** and isn’t affiliated with or endorsed by **Mullvad VPN AB**.
