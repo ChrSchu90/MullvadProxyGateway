@@ -16,8 +16,7 @@ jobs:
     if: ${{ github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-latest
     permissions:
-      pull-requests: write
-      contents: write
+      contents: read
     steps:
     - name: Checkout
       uses: actions/checkout@v6
@@ -55,6 +54,7 @@ jobs:
       if: ${{ steps.versions.outputs.update_available == 'true' }}
       uses: peter-evans/create-pull-request@v8
       with:
+        token: ${{ secrets.UPDATE_BOT_PAT }}
         branch: feature/UpstreamDependencyUpdate
         delete-branch: true
         title: "Update Upstream Dependencies"
