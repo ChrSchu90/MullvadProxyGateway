@@ -41,7 +41,7 @@ jobs:
         [[ "$gost_changed" == "true" ]] && update_available=true || update_available=false
         echo "update_available=$update_available" >> "$GITHUB_OUTPUT"
         echo "::notice::[info] update_available=$update_available"
-
+    
     - name: Update Dependency Versions
       if: ${{ steps.versions.outputs.update_available == 'true' }}
       run: |
@@ -50,11 +50,18 @@ jobs:
         sed -i -E 's/^(ARG GOST_VERSION=).*/\1${{ steps.versions.outputs.gost_latest }}/' Dockerfile
         sed -i -E 's/^(GOST_VERSION=).*/\1${{ steps.versions.outputs.gost_latest }}/' debug.sh
     
+    - name: Create GitHub App token
+      id: app-token
+      uses: actions/create-github-app-token@v2
+      with:
+        app-id: ${{ vars.UPDATE_BOT_APP_ID }}
+        private-key: ${{ secrets.UPDATE_BOT_PRIVATE_KEY }}
+    
     - name: Create Pull Request
       if: ${{ steps.versions.outputs.update_available == 'true' }}
       uses: peter-evans/create-pull-request@v8
       with:
-        token: ${{ secrets.UPDATE_BOT_PAT }}
+        token: ${{ steps.app-token.outputs.token }}
         branch: feature/UpstreamDependencyUpdate
         delete-branch: true
         title: "Update Upstream Dependencies"
