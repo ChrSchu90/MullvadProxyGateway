@@ -62,7 +62,6 @@ jobs:
       uses: peter-evans/create-pull-request@v8
       with:
         token: ${{ steps.app-token.outputs.token }}
-        #token: ${{ secrets.UPDATE_BOT_PAT }}
         branch: feature/UpstreamDependencyUpdate
         delete-branch: true
         title: "Update Upstream Dependencies"
