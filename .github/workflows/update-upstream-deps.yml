@@ -63,7 +63,14 @@ jobs:
       with:
         token: ${{ steps.app-token.outputs.token }}
         branch: feature/UpstreamDependencyUpdate
+        sign-commits: true
         delete-branch: true
+        reviewers: ${{ github.repository_owner }}
+        assignees: ${{ github.repository_owner }}
+        labels: |
+          enhancement
+          dependencies
+          bot
         title: "Update Upstream Dependencies"
         commit-message: "Update Upstream Dependencies"
         body: |
