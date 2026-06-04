@@ -66,7 +66,6 @@ jobs:
         sign-commits: true
         delete-branch: true
         reviewers: ${{ github.repository_owner }}
-        assignees: ${{ github.repository_owner }}
         labels: |
           enhancement
           dependencies
