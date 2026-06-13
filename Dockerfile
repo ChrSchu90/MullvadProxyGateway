@@ -26,7 +26,7 @@ RUN apk add --no-cache --virtual .fetch-deps wget tar && \
 COPY --chmod=755 run.sh /run.sh
 COPY --chmod=755 GostGen/publish/${TARGETOS}/${TARGETARCH}${TARGETVARIANT} .
 
-HEALTHCHECK --interval=30s --timeout=30s --retries=5 --start-period=30s CMD \
+HEALTHCHECK --interval=30s --timeout=30s --retries=3 --start-period=30s CMD \
   sh -c "curl -fs https://am.i.mullvad.net/json | grep -q '\"mullvad_exit_ip\":true'"
 
 VOLUME ["/data"]
