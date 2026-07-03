@@ -1,10 +1,7 @@
-# Mullvad Proxy Gateway [![Build](https://github.com/ChrSchu90/MullvadProxyGateway/actions/workflows/build.yml/badge.svg)](https://github.com/ChrSchu90/MullvadProxyGateway/actions/workflows/build.yml)
+# Mullvad Proxy Gateway 
 
-> [!NOTE]
-> This is **not an official Mullvad project** and isn’t affiliated with or endorsed by **Mullvad VPN AB**.
->
-> The name “Mullvad” is solely used to indicate the use and requirement of their services.
-> All trademarks and service names belong to their respective owners.
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE) [![Build](https://github.com/ChrSchu90/MullvadProxyGateway/actions/workflows/build.yml/badge.svg)](https://github.com/ChrSchu90/MullvadProxyGateway/actions/workflows/build.yml) [![GHCR](https://img.shields.io/badge/GHCR-mullvad--proxy--gateway-blue?logo=github)](https://github.com/ChrSchu90/MullvadProxyGateway/pkgs/container/mullvad-proxy-gateway)
+
 
 ## 🚀 One tunnel. Every Mullvad location.
 
@@ -21,6 +18,12 @@ only specific applications (e.g., a scraper or download client) to use the SOCKS
 system traffic continues to use your regular local connection. No full-device VPN routing required.
 
 <img height="180" src="https://github.com/user-attachments/assets/ec9d8b72-6827-4289-b076-c8b40f50fdd9" />
+
+> [!NOTE]
+> This is **not an official Mullvad project** and isn’t affiliated with or endorsed by **Mullvad VPN AB**.
+>
+> The name “Mullvad” is solely used to indicate the use and requirement of their services.
+> All trademarks and service names belong to their respective owners.
 
 ## ✔️ Features
 
