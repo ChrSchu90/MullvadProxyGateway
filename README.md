@@ -16,7 +16,7 @@ changing your exit location without reconnecting a VPN or restarting application
 only specific applications (e.g., a scraper or download client) to use the SOCKS5 proxy, while the rest of your 
 system traffic continues to use your regular local connection. No full-device VPN routing required.
 
-<img height="180" src="https://github.com/user-attachments/assets/ec9d8b72-6827-4289-b076-c8b40f50fdd9" />
+<img src="https://github.com/user-attachments/assets/ae97b2af-9f77-4db1-bf01-e05f66fd0170" />
 
 > [!NOTE]
 > This is **not an official Mullvad project** and isn’t affiliated with or endorsed by **Mullvad VPN AB**.
