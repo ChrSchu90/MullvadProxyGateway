@@ -1,7 +1,6 @@
-# Mullvad Proxy Gateway 
+# 🐳 Mullvad Proxy Gateway 
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE) [![Build](https://github.com/ChrSchu90/MullvadProxyGateway/actions/workflows/build.yml/badge.svg)](https://github.com/ChrSchu90/MullvadProxyGateway/actions/workflows/build.yml) [![GHCR](https://img.shields.io/badge/GHCR-mullvad--proxy--gateway-blue?logo=github)](https://github.com/ChrSchu90/MullvadProxyGateway/pkgs/container/mullvad-proxy-gateway)
-
 
 ## 🚀 One tunnel. Every Mullvad location.
 
