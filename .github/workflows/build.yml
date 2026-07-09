@@ -10,11 +10,16 @@ on:
     paths-ignore:
       - '**/*.md'
       - '**/*.png'
+      - 'Documentation/**'
     tags:
       - 'v*'
   pull_request:
     branches:
       - 'main'
+    paths-ignore:
+      - '**/*.md'
+      - '**/*.png'
+      - 'Documentation/**'
 
 env:
   NET_SOLUTION: GostGen/GostGen.slnx
