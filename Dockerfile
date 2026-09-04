@@ -3,7 +3,7 @@ FROM alpine:3.24@sha256:28bd5fe8b56d1bd048e5babf5b10710ebe0bae67db86916198a6eec4
 ARG TARGETOS
 ARG TARGETARCH
 ARG TARGETVARIANT
-ARG GOST_VERSION=3.2.6
+ARG GOST_VERSION=3.3.0
 
 # Install required tools, dotnet dependencies and wireguard dependencies + fixes
 RUN apk add --no-cache curl grep \
