@@ -45,6 +45,7 @@ internal class GostProxySync
         var networkInterface = GetDefaultInterface();
         var changed = await UpdateLocalProxyAsync(gostConfig, gatewayConfig, networkInterface).ConfigureAwait(false);
         changed |= await UpdateMullvadServersAsync(gostConfig, gatewayConfig, networkInterface).ConfigureAwait(false);
+        changed |= UpdateProxyAuther(gostConfig, gatewayConfig);
         return changed;
     }
 
@@ -82,7 +83,6 @@ internal class GostProxySync
     {
         if (!gatewayConfig.UpdateServersOnStartup && gostConfig.Services?.Any() == true && gostConfig.Chains?.Any() == true)
         {
-            UpdateProxyAuther(gostConfig, gatewayConfig);
             Log.Information("Skip update of Mullvad servers");
             return false;
         }
@@ -379,6 +379,7 @@ internal class GostProxySync
             {
                 Log.Debug($"Updating service `{service.Name}` auther group");
                 service.Handler.Auther = autherGrp;
+                cfgChanged = true;
             }
         }
         

@@ -501,7 +501,7 @@ public class GostProxySyncTests
         changed = await GostProxySync.UpdateMullvadServersAsync(gostCfg, gatewayCfg, "eth0").ConfigureAwait(false);
         Assert.IsTrue(changed, "Proxies must be changed if no user with role is available");
         Assert.IsNull(gostCfg.Services[0].Handler?.Auther);
-        
+
         testUser.HasMullvadProxyAccess = false;
         changed = await GostProxySync.UpdateMullvadServersAsync(gostCfg, gatewayCfg, "eth0").ConfigureAwait(false);
         Assert.IsTrue(changed, "Proxies must be changed user with disabled role has been added");
@@ -577,6 +577,48 @@ public class GostProxySyncTests
         Assert.IsTrue(changed, "A changed relay server city port should result in a changed since the related pool is updated");
         Assert.IsTrue(relayJson.Remove(modRelay), "Failed to remove mod relay");
         await File.WriteAllTextAsync(GostProxySync.RelayFile, JsonSerializer.Serialize(relayJson)).ConfigureAwait(false);
+    }
+
+    [TestMethod]
+    public async Task AuthOnlyChangeIsReported()
+    {
+        var gateway = new GatewayConfig
+        {
+            UpdateServersOnStartup = false
+        };
+
+        gateway.Users["test"] = new User
+        {
+            Password = "test",
+            HasMullvadProxyAccess = false
+        };
+
+        var gost = new GostConfig
+        {
+            Services =
+                [
+                    new ServiceConfig
+                        {
+                            Name = "service-de-fra-1",
+                            Addr = ":2000",
+                            Handler = new HandlerConfig { Type = "socks5" }
+                        }
+                ],
+            Chains = [new ChainConfig { Name = "chain-de-fra-1" }]
+        };
+
+        // Prepare local proxy to avoid unrelated changes
+        await GostProxySync.UpdateLocalProxyAsync(gost, gateway, GostProxySync.GetDefaultInterface());
+
+        // Only the authentication configuration should change
+        var changed = await GostProxySync.UpdateAsync(gost, gateway);
+
+        Assert.IsTrue(changed);
+        Assert.AreEqual(GostUserSync.AutherMullvadGroup, gost.Services!.Single(s => s.Name == "service-de-fra-1").Handler!.Auther);
+
+        // Running again should not report any changes
+        changed = await GostProxySync.UpdateAsync(gost, gateway);
+        Assert.IsFalse(changed);
     }
 
     private async Task<bool> IsRelaysApiReachable()

@@ -12,6 +12,8 @@
         <File Path="../.github/workflows/update-upstream-deps.yml" />
     </Folder>
     <Folder Name="/Solution Items/">
+        <File Path="../.editorconfig" />
+        <File Path="../.gitattributes" />
         <File Path="../.gitignore" />
         <File Path="../global.json" />
         <File Path="Directory.Build.props" />
