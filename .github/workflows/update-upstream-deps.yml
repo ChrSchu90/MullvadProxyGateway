@@ -4,7 +4,7 @@ name: Update Upstream Dependencies
 
 on:
   schedule:
-    - cron: '27 16 * * 5'
+    - cron: '27 13 * * *'
       timezone: 'Europe/Berlin'
   workflow_dispatch:
 

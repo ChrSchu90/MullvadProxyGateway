@@ -3,7 +3,7 @@ name: Build
 on:
   workflow_dispatch:
   schedule:
-    - cron: '27 15 * * 5'
+    - cron: '27 13 * * 5'
       timezone: 'Europe/Berlin'
   push:
     branches:
