@@ -5,7 +5,7 @@ updates:
     schedule:
       interval: "weekly"
       day: "friday"
-      time: "12:37"
+      time: "12:27"
       timezone: "Europe/Berlin"
   
   - package-ecosystem: "nuget"
@@ -21,5 +21,5 @@ updates:
     schedule:
       interval: "weekly"
       day: "friday"
-      time: "12:17"
+      time: "12:27"
       timezone: "Europe/Berlin"
