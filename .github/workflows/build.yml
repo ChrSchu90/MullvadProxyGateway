@@ -24,9 +24,6 @@ on:
 
 env:
   NET_SOLUTION: GostGen/GostGen.slnx
-  NET_PROJECT: GostGen/source/GostGen.csproj
-  NET_PUBLISH_DIR: GostGen/publish/
-  NET_PUBLISH_ARGS: "--verbosity normal --configuration Release -p:DebugType=embedded -p:PublishSingleFile=true --self-contained"
   DOCKER_REGISTRY: ghcr.io
   DOCKER_FULL_IMAGE_NAME: ghcr.io/chrschu90/mullvad-proxy-gateway # Make sure to use lowercase only
   DOCKER_PLATFORMS: linux/amd64,linux/arm64/v8,linux/arm/v7
@@ -65,30 +62,6 @@ jobs:
 
     - name: .NET Test
       run: dotnet test --solution ${{ env.NET_SOLUTION }} --verbosity normal --no-restore --configuration Release
-
-    - name: .NET Publish amd64
-      run: |
-        if [ -n "${{ steps.tagver.outputs.version }}" ]; then
-          dotnet publish ${{ env.NET_PROJECT }} -r linux-musl-x64 ${{ env.NET_PUBLISH_ARGS }} -p:Version=${{ steps.tagver.outputs.version }} -o ${{ env.NET_PUBLISH_DIR }}linux/amd64
-        else
-          dotnet publish ${{ env.NET_PROJECT }} -r linux-musl-x64 ${{ env.NET_PUBLISH_ARGS }} -o ${{ env.NET_PUBLISH_DIR }}linux/amd64      
-        fi
-
-    - name: .NET Publish arm64
-      run: |
-        if [ -n "${{ steps.tagver.outputs.version }}" ]; then
-          dotnet publish ${{ env.NET_PROJECT }} -r linux-musl-arm64 ${{ env.NET_PUBLISH_ARGS }} -p:Version=${{ steps.tagver.outputs.version }} -o ${{ env.NET_PUBLISH_DIR }}linux/arm64
-        else
-          dotnet publish ${{ env.NET_PROJECT }} -r linux-musl-arm64 ${{ env.NET_PUBLISH_ARGS }} -o ${{ env.NET_PUBLISH_DIR }}linux/arm64
-        fi
-
-    - name: .NET Publish armv7
-      run: |
-        if [ -n "${{ steps.tagver.outputs.version }}" ]; then
-          dotnet publish ${{ env.NET_PROJECT }} -r linux-musl-arm ${{ env.NET_PUBLISH_ARGS }} -p:Version=${{ steps.tagver.outputs.version }} -o ${{ env.NET_PUBLISH_DIR }}linux/armv7
-        else
-          dotnet publish ${{ env.NET_PROJECT }} -r linux-musl-arm ${{ env.NET_PUBLISH_ARGS }} -o ${{ env.NET_PUBLISH_DIR }}linux/armv7
-        fi
 
     - name: Docker QEMU Setup
       uses: docker/setup-qemu-action@v4
@@ -147,6 +120,8 @@ jobs:
         annotations: ${{ steps.dockermeta.outputs.annotations }}
         #cache-from: type=gha
         #cache-to: type=gha,mode=max
+        build-args: |
+          APP_VERSION=${{ steps.tagver.outputs.package || '0.0.1-ci' }}
 
     - name: Sign Docker Image
       if: ${{ steps.tagver.outputs.is_valid == 'true' }}

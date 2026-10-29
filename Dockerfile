@@ -1,4 +1,35 @@
-FROM alpine:3.24@sha256:294b683cb724975bec92580e1e685676bd4b50bda910ddb8c51d4cabeaec77e6
+# ------------------------------------------------------------
+# Build
+# ------------------------------------------------------------
+
+FROM --platform=${BUILDPLATFORM} mcr.microsoft.com/dotnet/sdk:10.0-alpine3.24@sha256:230c3fbae0ceedc70bca04eed2bfb5694e8b248cadbb81010f41b7a993601f55 AS build
+
+ARG TARGETARCH
+ARG TARGETVARIANT
+ARG APP_VERSION
+
+WORKDIR /src
+COPY /GostGen .
+
+RUN dotnet publish \
+    source/GostGen.csproj \
+    -p:DebugType=embedded \
+    -p:GenerateDocumentationFile=false \
+    -p:Version="${APP_VERSION}" \
+    -c Release \
+    -a "${TARGETARCH}" \
+    --verbosity n \
+    --self-contained true \
+    -o /app/publish
+
+
+
+
+# ------------------------------------------------------------
+# Runtime
+# ------------------------------------------------------------
+
+FROM alpine:3.24@sha256:294b683cb724975bec92580e1e685676bd4b50bda910ddb8c51d4cabeaec77e6 AS final
 
 ARG TARGETOS
 ARG TARGETARCH
@@ -24,7 +55,7 @@ RUN apk add --no-cache --virtual .fetch-deps wget tar && \
 
 # Add project binaries
 COPY --chmod=755 run.sh /run.sh
-COPY --chmod=755 GostGen/publish/${TARGETOS}/${TARGETARCH}${TARGETVARIANT} .
+COPY --from=build --chmod=755 /app/publish/ .
 
 HEALTHCHECK --interval=30s --timeout=30s --retries=3 --start-period=30s CMD \
   sh -c "curl -fs https://am.i.mullvad.net/json | grep -q '\"mullvad_exit_ip\":true'"
