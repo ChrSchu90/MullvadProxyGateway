@@ -29,7 +29,7 @@ internal class GostMetricsServerSync
                 !string.Equals(gostConfig.Metrics.Path, MetricsPath) ||
                 !string.Equals(gostConfig.Metrics.Auther, autherGrp))
             {
-                Log.Debug($"Enable metrics server, use `curl -v -u user:passwd http://ip:{gatewayConfig.GostMetricsPort}{MetricsPath}` for tests");
+                Log.Debug("Enable metrics server, use 'curl -v -u user:passwd http://ip:{GatewayConfigGostMetricsPort}{MetricsPath}' for tests", gatewayConfig.GostMetricsPort, MetricsPath);
                 gostConfig.Metrics.Addr = metricsAddress;
                 gostConfig.Metrics.Path = MetricsPath;
                 gostConfig.Metrics.Auther = autherGrp;

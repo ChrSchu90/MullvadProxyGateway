@@ -27,7 +27,7 @@ internal class GostLoggingSync
             string.Equals(gostConfig.Log?.Output, LogOutput))
             return Task.FromResult(false);
 
-        Log.Debug($"Updating GOST logging level to `{logLevel}`");
+        Log.Debug("Updating GOST logging level to {LogLevel}", logLevel);
         gostConfig.Log = new LogConfig
         {
             Format = LogFormat,
