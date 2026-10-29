@@ -68,7 +68,7 @@ internal class GostProxySync
             !string.Equals(service.Handler?.Type, SocksType) ||
             !string.Equals(service.Handler?.Auther, autherGrp))
         {
-            Log.Debug($"Updating local proxy configuration `{ServiceLocalName}`");
+            Log.Debug("Updating local proxy configuration {ServiceLocalName}", ServiceLocalName);
             service.Addr = address;
             service.Interface = networkInterface;
             service.Listener = new() { Type = NetworkProtocol };
@@ -121,12 +121,12 @@ internal class GostProxySync
         {
             try
             {
-                Log.Verbose($"Loading Mullvad relays from file `{RelayFile}`");
+                Log.Verbose("Loading Mullvad relays from file {RelayFile}", RelayFile);
                 relays = JsonSerializer.Deserialize<List<MullvadRelay>>(await File.ReadAllTextAsync(RelayFile), new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
             }
             catch (Exception err)
             {
-                Log.Fatal(err, $"Error on loading Mullvad relays from file `{RelayFile}`");
+                Log.Fatal(err, "Error on loading Mullvad relays from file {RelayFile}", RelayFile);
                 return null;
             }
         }
@@ -134,12 +134,12 @@ internal class GostProxySync
         {
             try
             {
-                Log.Information($"Downloading Mullvad relays from {RelayApiUrl}");
+                Log.Information("Downloading Mullvad relays from {RelayApiUrl}", RelayApiUrl);
                 // ReSharper disable once ShortLivedHttpClient
                 using var httpClient = new HttpClient();
                 var json = await httpClient.GetStringAsync(RelayApiUrl).ConfigureAwait(false);
                 relays = JsonSerializer.Deserialize<List<MullvadRelay>>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-                Log.Verbose($"Downloaded Mullvad relays:\n{json}");
+                Log.Verbose("Downloaded Mullvad relays:\n{Json}", json);
             }
             catch (Exception err)
             {
@@ -149,12 +149,8 @@ internal class GostProxySync
         }
 
         if (relays?.Any() != true) return relays;
-        Log.Information($"Mullvad relays found: {relays.Count} total (" +
-                        $"{relays.GroupBy(r => r.CountryCode).Count()} countries, " +
-                        $"{relays.GroupBy(r => r.CityCode).Count()} cities, " +
-                        $"{relays.Count(r => !string.IsNullOrWhiteSpace(r.SocksName))} proxy endpoints; " +
-                        $"max {relays.GroupBy(r => r.CityCode).Max(c => c.Count())} endpoints per city)");
-
+        Log.Information("Mullvad relays found: {RelayCount} total ({CountryCount} countries, {CityCount} cities, {EndpointCount} proxy endpoints; max {MaxEndpointsPerCity} endpoints per city)", 
+                        relays.Count, relays.GroupBy(r => r.CountryCode).Count(), relays.GroupBy(r => r.CityCode).Count(), relays.Count(r => !string.IsNullOrWhiteSpace(r.SocksName)), relays.GroupBy(r => r.CityCode).Max(c => c.Count()));
         return relays;
     }
 
@@ -181,7 +177,7 @@ internal class GostProxySync
                           sericePort >= startPort + maxServiceAmount);          // Remove area end
             if (remove)
             {
-                Log.Debug($"Removing service `{s.Name}` and its chain `{s.Handler?.Chain}`");
+                Log.Debug("Removing service {ObjName} and its chain {HandlerChain}", s.Name, s.Handler?.Chain);
                 if (!string.IsNullOrWhiteSpace(s.Handler?.Chain))
                     gostConfig.Chains.RemoveAll(r => r.Name == s.Handler?.Chain);
                 cfgChanged = true;
@@ -205,7 +201,7 @@ internal class GostProxySync
             var service = gostConfig.Services.FirstOrDefault(s => string.Equals(s.Addr, serviceAddr));
             if (service == null)
             {
-                Log.Debug($"Adding service `{serviceName}`");
+                Log.Debug("Adding service {ServiceName}", serviceName);
                 service = new() { Addr = serviceAddr };
                 gostConfig.Services.Add(service);
                 cfgChanged = true;
@@ -220,7 +216,7 @@ internal class GostProxySync
                 !string.Equals(service.Handler.Type, SocksType) ||
                 !string.Equals(service.Handler.Auther, autherGrp))
             {
-                Log.Debug($"Update service `{serviceName}`");
+                Log.Debug("Update service {ServiceName}", serviceName);
                 service.Name = serviceName;
                 service.Interface = networkInterface;
                 service.Listener.Type = NetworkProtocol;
@@ -234,7 +230,7 @@ internal class GostProxySync
                             null;
             if (chain == null)
             {
-                Log.Debug($"Adding server chain `{chainName}`");
+                Log.Debug("Adding server chain {ChainName}", chainName);
                 chain = new ChainConfig { Name = chainName };
                 gostConfig.Chains.Add(chain);
                 cfgChanged = true;
@@ -243,7 +239,7 @@ internal class GostProxySync
             if (!string.Equals(chain.Name, chainName) ||
                 !string.Equals(service.Handler.Chain, chainName))
             {
-                Log.Debug($"Updating server chain `{chainName}`");
+                Log.Debug("Updating server chain {ChainName}", chainName);
                 chain.Name = chainName;
                 service.Handler.Chain = chainName;
                 cfgChanged = true;
@@ -252,7 +248,7 @@ internal class GostProxySync
             chain.Hops ??= []; // Only 1 hop should always exist
             if (chain.Hops.Count > 1)
             {
-                Log.Debug($"Cleanup of hops in chain `{chainName}`");
+                Log.Debug("Cleanup of hops in chain {ChainName}", chainName);
                 chain.Hops.RemoveRange(1, chain.Hops.Count - 1);
                 cfgChanged = true;
             }
@@ -260,7 +256,7 @@ internal class GostProxySync
             var hop = chain.Hops.FirstOrDefault();
             if (hop == null)
             {
-                Log.Debug($"Adding server hop `{hopName}`");
+                Log.Debug("Adding server hop {HopName}", hopName);
                 hop = new HopConfig { Name = hopName };
                 chain.Hops.Add(hop);
                 cfgChanged = true;
@@ -268,7 +264,7 @@ internal class GostProxySync
 
             if (!string.Equals(hop.Name, hopName))
             {
-                Log.Debug($"Updating server hop `{hopName}`");
+                Log.Debug("Updating server hop {HopName}", hopName);
                 hop.Name = hopName;
                 cfgChanged = true;
             }
@@ -278,7 +274,7 @@ internal class GostProxySync
             {
                 if (hop.Selector != null)
                 {
-                    Log.Debug($"Updating server hop selector of `{hopName}`");
+                    Log.Debug("Updating server hop selector of {HopName}", hopName);
                     hop.Selector = null;
                     cfgChanged = true;
                 }
@@ -290,7 +286,7 @@ internal class GostProxySync
                     hop.Selector.MaxFails != PoolSelectorMaxFails ||
                     hop.Selector.FailTimeout != PoolSelectorFailTimeout)
                 {
-                    Log.Debug($"Updating hop selector of `{hopName}`");
+                    Log.Debug("Updating hop selector of {HopName}", hopName);
                     hop.Selector.Strategy = PoolSelectorStrategy;
                     hop.Selector.MaxFails = PoolSelectorMaxFails;
                     hop.Selector.FailTimeout = PoolSelectorFailTimeout;
@@ -303,7 +299,7 @@ internal class GostProxySync
             if ((!isPool && hop.Nodes.Count > 1) || // Only 1 node should exist for single servers, 
                 (isPool && hop.Nodes.Count > servers.Length)) // clear pool only if more nodes are defined than servers available
             {
-                Log.Debug($"Clearing server hop notes of `{hopName}`");
+                Log.Debug("Clearing server hop notes of {HopName}", hopName);
                 hop.Nodes.Clear();
                 cfgChanged = true;
             }
@@ -317,7 +313,7 @@ internal class GostProxySync
                 var node = hop.Nodes.ElementAtOrDefault(nodeIndex);
                 if (node == null)
                 {
-                    Log.Debug($"Adding pool hop `{hopName}`");
+                    Log.Debug("Adding pool hop {HopName}", hopName);
                     node = new() { Name = nodeName };
                     hop.Nodes.Add(node);
                     changed = true;
@@ -329,7 +325,7 @@ internal class GostProxySync
                     !string.Equals(node.Connector?.Type, SocksType) ||
                     !string.Equals(node.Dialer?.Type, NetworkProtocol))
                 {
-                    Log.Debug($"Updating server hop `{nodeName}`");
+                    Log.Debug("Updating server hop {NodeName}", nodeName);
                     node.Name = nodeName;
                     node.Bypass = GostBypassSync.BypassMullvadGroup;
                     node.Addr = svrAddress;
@@ -377,7 +373,7 @@ internal class GostProxySync
             var autherGrp = gatewayConfig.HasMullvadProxyUser ? GostUserSync.AutherMullvadGroup : null;
             if (!string.Equals(service.Handler.Auther, autherGrp))
             {
-                Log.Debug($"Updating service `{service.Name}` auther group");
+                Log.Debug("Updating service {ServiceName} auther group", service.Name);
                 service.Handler.Auther = autherGrp;
                 cfgChanged = true;
             }
@@ -418,7 +414,7 @@ internal class GostProxySync
         if (nextPortFree + proxyPortsPerCity < proxyPortEnd)
             return nextPortFree;
 
-        Log.Error($"Unable to find free port `{countryCode}-{cityCode}` since last used port `{nextPortFree + proxyPortsPerCity}` exceeds end of city proxy port area ({proxyPortStart}-{proxyPortEnd})");
+        Log.Error("Unable to find free port {CountryCode}-{CityCode} since last used port {ProxyPortsPerCity} exceeds end of city proxy port area ({ProxyPortStart}-{ProxyPortEnd})", countryCode, cityCode, nextPortFree + proxyPortsPerCity, proxyPortStart, proxyPortEnd);
         return -1;
     }
 
@@ -439,7 +435,7 @@ internal class GostProxySync
     {
         try
         {
-            Log.Information($"Exporting proxy list to `{ExportCsvFile}`");
+            Log.Information("Exporting proxy list to {ExportCsvFile}", ExportCsvFile);
             var csvString = "Country,Country Code,City,City Code,City No.,Location Code,Port,Target\n" + string.Join("\n",
                                 proxies.Select(p => $"\"{p.Server.CountryName}\"," +
                                                     $"{p.Server.CountryCode}," +
@@ -462,7 +458,7 @@ internal class GostProxySync
     {
         try
         {
-            Log.Information($"Exporting proxy list to `{ExportJsonFile}`");
+            Log.Information("Exporting proxy list to {ExportJsonFile}", ExportJsonFile);
             var export = proxies.Select(p => new
             {
                 Country = p.Server.CountryName,
@@ -522,7 +518,7 @@ internal class GostProxySync
                 return true;
             }).ToArray();
 
-        Log.Information($"Filtered {relays.Count} Mullvad relays, {filterdRelays.Length} relays remaining");
+        Log.Information("Filtered {RelaysCount} Mullvad relays, {FilterdRelaysLength} relays remaining", relays.Count, filterdRelays.Length);
         return filterdRelays;
     }
 

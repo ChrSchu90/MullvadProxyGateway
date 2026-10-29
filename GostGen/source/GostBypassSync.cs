@@ -27,7 +27,7 @@ internal class GostBypassSync
         var bypassGroup = gostConfig.Bypasses.FirstOrDefault(a => string.Equals(a.Name, BypassMullvadGroup));
         if (bypassGroup == null)
         {
-            Log.Debug($"Adding bypass group `{BypassMullvadGroup}`");
+            Log.Debug("Adding bypass group {BypassMullvadGroup}", BypassMullvadGroup);
             bypassGroup = new BypassConfig { Name = BypassMullvadGroup };
             gostConfig.Bypasses.Add(bypassGroup);
             changed = true;
@@ -39,7 +39,7 @@ internal class GostBypassSync
             var mullvadBypass = bypassGroup.Matchers.FirstOrDefault(u => string.Equals(u, configBypass, StringComparison.OrdinalIgnoreCase));
             if (mullvadBypass == null)
             {
-                Log.Debug($"Add new bypass `{configBypass}` to `{BypassMullvadGroup}`");
+                Log.Debug("Add new bypass {ConfigBypass} to {BypassMullvadGroup}", configBypass, BypassMullvadGroup);
                 bypassGroup.Matchers.Add(configBypass);
                 changed = true;
             }
@@ -51,7 +51,7 @@ internal class GostBypassSync
                 gatewayConfig.Bypasses.Contains(gostBypass, StringComparer.OrdinalIgnoreCase))
                 continue;
 
-            Log.Debug($"Removing bypass `{gostBypass}` from `{BypassMullvadGroup}`");
+            Log.Debug("Removing bypass {GostBypass} from {BypassMullvadGroup}", gostBypass, BypassMullvadGroup);
             changed = bypassGroup.Matchers.Remove(gostBypass);
         }
 

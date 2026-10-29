@@ -28,7 +28,7 @@ internal class Program
         try
         {
             var logLevelSwitch = InitLogging();
-            Log.Information($"Starting GOST config generator v{Assembly.GetExecutingAssembly().GetName().Version?.ToString(3)}");
+            Log.Information("Starting GOST config generator v{ToString}", Assembly.GetExecutingAssembly().GetName().Version?.ToString(3));
 
             var gatewayConfig = LoadGatewayConfig()!;
             if (gatewayConfig == null!) return;
@@ -79,13 +79,13 @@ internal class Program
         {
             if (!File.Exists(GatewayConfig.ConfigYamlFileName) || new FileInfo(GatewayConfig.ConfigYamlFileName).Length < 1)
             {
-                Log.Error($"Unable to load the gateway configuration `{GatewayConfig.ConfigYamlFileName}`!");
+                Log.Error("Unable to load the gateway configuration {GatewayConfigConfigYamlFileName}!", GatewayConfig.ConfigYamlFileName);
                 return null;
             }
 
             var config = GatewayConfig.FromFile(GatewayConfig.ConfigYamlFileName);
             if (config.Validate(out var configError)) return config;
-            Log.Error($"Gateway config is invalid ({configError})");
+            Log.Error("Gateway config is invalid ({ErrorMessage})", configError);
         }
         catch (Exception err)
         {
@@ -101,17 +101,17 @@ internal class Program
         {
             if (File.Exists(GostConfig.ConfigFile) && new FileInfo(GostConfig.ConfigFile).Length > 0)
             {
-                Log.Information($"Loading GOST config `{GostConfig.ConfigFile}`");
+                Log.Information("Loading GOST config {GostConfigFile}", GostConfig.ConfigFile);
                 return GostConfig.LoadYaml(await File.ReadAllTextAsync(GostConfig.ConfigFile).ConfigureAwait(false));
             }
 
-            Log.Information($"Creating new GOST config since no config could not be found at `{GostConfig.ConfigFile}`");
+            Log.Information("Creating new GOST config since no config could not be found at {GostConfigFile}", GostConfig.ConfigFile);
             return new GostConfig();
 
         }
         catch (Exception err)
         {
-            Log.Fatal(err, $"Error on loading current GOST config `{GostConfig.ConfigFile}`");
+            Log.Fatal(err, "Error on loading current GOST config {GostConfigFile}", GostConfig.ConfigFile);
             return null;
         }
     }
@@ -122,14 +122,14 @@ internal class Program
         {
             // Write to temp file first and then move to target file to avoid damaged file when app is killed while writing
             const string TmpFile = GostConfig.ConfigFile + ".tmp";
-            Log.Information($"Saving GOST config to `{GostConfig.ConfigFile}`");
+            Log.Information("Saving GOST config to {GostConfigFile}", GostConfig.ConfigFile);
             await File.WriteAllTextAsync(TmpFile, GostConfig.ToYaml(gostConfig)).ConfigureAwait(false);
             File.Move(TmpFile, GostConfig.ConfigFile, true);
             return true;
         }
         catch (Exception err)
         {
-            Log.Fatal(err, "Error on saving GOST config");
+            Log.Fatal(err, "Error on saving GOST config {GostConfigFile}", GostConfig.ConfigFile);
             return false;
         }
     }

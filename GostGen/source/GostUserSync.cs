@@ -38,7 +38,7 @@ internal class GostUserSync
             var group = gostConfig.Authers!.FirstOrDefault(a => string.Equals(a.Name, groupName));
             if (group == null)
             {
-                Log.Debug($"Adding auther group `{groupName}`");
+                Log.Debug("Adding auther group {GroupName}", groupName);
                 group = new AutherConfig { Name = groupName };
                 gostConfig.Authers!.Add(group);
                 changed = true;
@@ -59,14 +59,14 @@ internal class GostUserSync
                 var groupUser = group.Auths!.FirstOrDefault(u => string.Equals(u.Username, auth.Username));
                 if (groupUser == null && hasAccess())
                 {
-                    Log.Debug($"Add user `{auth.Username}` to `{group.Name}`");
+                    Log.Debug("Add user {AuthUsername} to {GroupName}", auth.Username, group.Name);
                     group.Auths!.Add(auth);
                     changed = true;
                     return;
                 }
 
                 if (!hasAccess() || groupUser == null || groupUser == auth) return;
-                Log.Debug($"Update user `{auth.Username}` in `{group.Name}`");
+                Log.Debug("Update user {AuthUsername} in {GroupName}", auth.Username, group.Name);
                 groupUser.Password = auth.Password;
                 groupUser.File = null;
                 changed = true;
@@ -86,7 +86,7 @@ internal class GostUserSync
                     hasAccess(cfgUser))
                     continue;
 
-                Log.Debug($"Removing user `{groupAuth.Username}` from `{group.Name}`");
+                Log.Debug("Removing user {GroupAuthUsername} from {GroupName}", groupAuth.Username, group.Name);
                 changed |= group.Auths!.Remove(groupAuth);
             }
         }
