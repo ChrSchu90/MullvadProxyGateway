@@ -1,7 +1,7 @@
 <Solution>
     <Folder Name="/Container Items/">
         <File Path="../.dockerignore" />
-        <File Path="../debug.sh" />
+        <File Path="../docker-debug.sh" />
         <File Path="../Dockerfile" />
         <File Path="../README.md" />
         <File Path="../run.sh" />
@@ -9,7 +9,7 @@
     <Folder Name="/GitHub/">
         <File Path="../.github/dependabot.yml" />
         <File Path="../.github/workflows/build.yml" />
-        <File Path="../.github/workflows/update-upstream-deps.yml" />
+        <File Path="../.github/workflows/update-dependencies.yml" />
     </Folder>
     <Folder Name="/Solution Items/">
         <File Path="../.editorconfig" />
