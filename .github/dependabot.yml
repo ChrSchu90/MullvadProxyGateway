@@ -23,3 +23,7 @@ updates:
       day: "friday"
       time: "12:17"
       timezone: "Europe/Berlin"
+    groups:
+      docker-images:
+        patterns:
+          - "*"
