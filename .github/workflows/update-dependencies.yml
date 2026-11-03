@@ -49,7 +49,7 @@ jobs:
         set -euo pipefail
         
         sed -i -E 's/^(ARG GOST_VERSION=).*/\1${{ steps.versions.outputs.gost_latest }}/' Dockerfile
-        sed -i -E 's/^(GOST_VERSION=).*/\1${{ steps.versions.outputs.gost_latest }}/' debug.sh
+        sed -i -E 's/^(GOST_VERSION=).*/\1${{ steps.versions.outputs.gost_latest }}/' docker-debug.sh
     
     - name: Create GitHub App token
       id: app-token
