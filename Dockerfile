@@ -2,7 +2,7 @@
 # Build
 # ------------------------------------------------------------
 
-FROM --platform=${BUILDPLATFORM} mcr.microsoft.com/dotnet/sdk:10.0-alpine3.24@sha256:5562fd626eec39f6f53218f9b7d7856ab7195d51d846568304fbe85071a3b6e6 AS build
+FROM --platform=${BUILDPLATFORM} mcr.microsoft.com/dotnet/sdk:11.0-alpine3.24@sha256:52556c0fb9d0f609ae9aeab9efeeba96f4acc2f7038f7696f2235ccbdbb8e290 AS build
 
 ARG TARGETARCH
 ARG TARGETVARIANT
@@ -29,7 +29,7 @@ RUN dotnet publish \
 # Runtime
 # ------------------------------------------------------------
 
-FROM alpine:3.24@sha256:be2656061b536c1883c4034790e21d0a09c5aaaf51968b89368a3c0371ea2c9a AS final
+FROM alpine:3.24@sha256:f59abe656b692d901e184be3445e084786602108599d2a51d229c0f5a48c71bf AS final
 
 ARG TARGETOS
 ARG TARGETARCH
